@@ -1,24 +1,33 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Dependencies
+node_modules/
 
-node_modules
-dist
-dist-ssr
-*.local
+# Rust build artifacts — NEVER commit these
+target/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Frontend build output
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Environment
+.env
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Keypairs (NEVER commit private keys)
+*keypair*.json
+*.key
+id.json
+
+# Agent memory DB
+*.db
