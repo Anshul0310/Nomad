@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Solana build artifacts (large binary caches)
+target/debug/
+target/release/
+target/sbpf-solana-solana/
+target/.rustc_info.json
+target/flycheck*/
+
+# Old sovereign artifacts
+target/sovereign_treasury*
+
+# Keep deploy .so, IDL, and types (but NOT keypairs)
+!target/deploy/
+!target/deploy/*.so
+!target/idl/
+!target/types/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Keypairs (NEVER commit private keys)
+*keypair*.json
+*.key
+id.json

@@ -1,0 +1,1 @@
+cp ~/nmithacks26_build/target/deploy/nomad_treasury.so /mnt/d/Hackathon/NmitHacks*26/
