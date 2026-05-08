@@ -15,7 +15,7 @@ OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "google/gemma-4-26b-a4b-it:free")
 
 # ── Solana ──────────────────────────────────────────────────────────────────
 SOLANA_NETWORK: str = os.getenv("SOLANA_NETWORK", "devnet")
-SOLANA_RPC_URLS = {"devnet": "https://api.devnet.solana.com", "mainnet": "https://api.mainnet-beta.solana.com"}
+SOLANA_RPC_URLS = {"devnet": "https://api.devnet.solana.com", "testnet": "https://api.testnet.solana.com", "mainnet": "https://api.mainnet-beta.solana.com"}
 SOLANA_RPC_URL: str = os.getenv("SOLANA_RPC_URL", SOLANA_RPC_URLS.get(SOLANA_NETWORK, SOLANA_RPC_URLS["devnet"]))
 WALLET_PRIVATE_KEY: str = os.getenv("WALLET_PRIVATE_KEY", "")
 

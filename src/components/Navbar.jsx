@@ -2,7 +2,6 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
 import { Wallet, Activity, ShoppingBag, Award, BarChart3, Menu, X, ChevronDown, Globe } from "lucide-react"
-import { useWalletData, useNetworkSwitch } from "@/hooks/useAgentAPI"
 
 const navItems = [
   { label: "Dashboard", href: "#dashboard", icon: BarChart3 },
@@ -11,20 +10,57 @@ const navItems = [
   { label: "Bounties", href: "#bounties", icon: Award },
 ]
 
+const NETWORKS = [
+  { id: "devnet",  label: "Devnet",  color: "text-emerald-400", dot: "bg-emerald-400" },
+  { id: "testnet", label: "Testnet", color: "text-amber-400",   dot: "bg-amber-400"   },
+  { id: "mainnet", label: "Mainnet", color: "text-rose-400",    dot: "bg-rose-400"     },
+]
+
 export function Navbar() {
   const [walletConnected, setWalletConnected] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const { network } = useWalletData()
-  const { switchNetwork, switching } = useNetworkSwitch()
+  const [scrolled, setScrolled] = React.useState(false)
   const [networkDropdown, setNetworkDropdown] = React.useState(false)
-  
-  const currentNetwork = network || "devnet"
+  const [currentNetwork, setCurrentNetwork] = React.useState("devnet")
+  const [switching, setSwitching] = React.useState(false)
+  const dropdownRef = React.useRef(null)
+
+  const activeNet = NETWORKS.find(n => n.id === currentNetwork) || NETWORKS[0]
 
   React.useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50)
     window.addEventListener("scroll", handler)
     return () => window.removeEventListener("scroll", handler)
   }, [])
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setNetworkDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  const handleNetworkSwitch = async (net) => {
+    if (net === currentNetwork) {
+      setNetworkDropdown(false)
+      return
+    }
+    setSwitching(true)
+    setCurrentNetwork(net)
+    setNetworkDropdown(false)
+
+    // Try to tell backend (silently fails if backend is offline)
+    try {
+      await fetch(`http://localhost:8000/api/network/${net}`, { method: "POST", signal: AbortSignal.timeout(3000) })
+    } catch {
+      // Backend offline — that's fine, the UI still reflects the selection
+    }
+    setSwitching(false)
+  }
 
   return (
     <motion.div 
@@ -56,41 +92,53 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           {/* Network Switcher */}
-          <div className="relative hidden sm:block">
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setNetworkDropdown(!networkDropdown)}
               disabled={switching}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/80"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 text-white/80"
             >
-              <Globe className="w-4 h-4 text-emerald-400" />
-              {switching ? "Switching..." : currentNetwork.charAt(0).toUpperCase() + currentNetwork.slice(1)}
-              <ChevronDown className={`w-3 h-3 transition-transform ${networkDropdown ? "rotate-180" : ""}`} />
+              <span className={`w-2 h-2 rounded-full ${activeNet.dot} ${switching ? "animate-pulse" : ""}`} />
+              <span className="hidden sm:inline">
+                {switching ? "Switching..." : activeNet.label}
+              </span>
+              <Globe className={`sm:hidden w-4 h-4 ${activeNet.color}`} />
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${networkDropdown ? "rotate-180" : ""}`} />
             </button>
             
             <AnimatePresence>
               {networkDropdown && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-36 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 mt-2 w-44 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden z-50 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
                 >
-                  {["devnet", "testnet", "mainnet"].map((net) => (
-                    <button
-                      key={net}
-                      onClick={() => {
-                        switchNetwork(net)
-                        setNetworkDropdown(false)
-                      }}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                        currentNetwork === net 
-                          ? "bg-white/10 text-white font-medium" 
-                          : "text-white/60 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      {net.charAt(0).toUpperCase() + net.slice(1)}
-                    </button>
-                  ))}
+                  <div className="p-1">
+                    {NETWORKS.map((net) => (
+                      <button
+                        key={net.id}
+                        onClick={() => handleNetworkSwitch(net.id)}
+                        className={`w-full text-left px-3 py-2.5 text-sm rounded-lg flex items-center gap-3 transition-all duration-150 ${
+                          currentNetwork === net.id 
+                            ? "bg-white/10 text-white font-medium" 
+                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${net.dot}`} />
+                        <span className="flex-1">{net.label}</span>
+                        {currentNetwork === net.id && (
+                          <span className="text-xs text-white/40">Active</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-white/5 px-3 py-2">
+                    <p className="text-[10px] text-white/25 font-mono">
+                      RPC: api.{currentNetwork}.solana.com
+                    </p>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -148,20 +196,21 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
-            <div className="pt-2 border-t border-white/10 mt-2">
-              <p className="text-xs text-white/40 mb-2 px-2 uppercase tracking-wider">Network</p>
+            <div className="pt-3 border-t border-white/10 mt-2">
+              <p className="text-xs text-white/40 mb-2 px-2 uppercase tracking-wider font-medium">Network</p>
               <div className="flex gap-2 mb-4 px-2">
-                {["devnet", "testnet", "mainnet"].map((net) => (
+                {NETWORKS.map((net) => (
                   <button
-                    key={net}
-                    onClick={() => { switchNetwork(net); setMobileOpen(false) }}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      currentNetwork === net 
-                        ? "bg-white/20 text-white" 
-                        : "bg-white/5 text-white/50"
+                    key={net.id}
+                    onClick={() => handleNetworkSwitch(net.id)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                      currentNetwork === net.id 
+                        ? "bg-white/15 text-white border border-white/10" 
+                        : "bg-white/5 text-white/40 hover:text-white/70"
                     }`}
                   >
-                    {net.charAt(0).toUpperCase() + net.slice(1)}
+                    <span className={`w-1.5 h-1.5 rounded-full ${net.dot}`} />
+                    {net.label}
                   </button>
                 ))}
               </div>

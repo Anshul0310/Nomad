@@ -6,7 +6,8 @@ import {
   useBalanceHistory,
 } from "./useSimulatedData"
 
-const API_BASE = "/api"
+// Direct URL to FastAPI backend — no Vite proxy needed
+const API_BASE = "http://localhost:8000/api"
 
 // ── Fetch helper ────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ async function apiFetch(path) {
     if (!res.ok) return null
     return await res.json()
   } catch {
-    return null
+    return null  // Backend offline → silently fall back
   }
 }
 
