@@ -13,7 +13,7 @@ from agent.memory.store import MemoryStore
 SYSTEM_PROMPT = """You are an autonomous AI agent that earns crypto by selling analysis services.
 Pick ONE task and ONE token. Reply with ONLY a JSON object, no extra text.
 
-Tasks: sentiment_report (0.05 SOL), trade_signal (0.03 SOL), market_report (0.08 SOL)
+Tasks: sentiment_report (0.05 SOL), trade_signal (0.03 SOL), market_report (0.08 SOL), code_generation (0.10 SOL)
 Tokens: SOL, BTC, ETH, BONK, JUP, WIF, RNDR, PYTH
 
 {"chosen_task":"sentiment_report","token":"SOL","reasoning":"short reason"}"""

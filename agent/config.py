@@ -29,7 +29,7 @@ LOOP_DELAY_SECONDS: int = int(os.getenv("LOOP_DELAY_SECONDS", "5"))
 MEMORY_DB_PATH: str = os.getenv("MEMORY_DB_PATH", "nomad_memory.db")
 PROGRAM_ID: str = os.getenv("PROGRAM_ID", "Cm9ugYjV24DuiizVUNvAtKoQfq2fZRNqMtLWTezFoDSP")
 MEMORY_CONTEXT_WINDOW: int = int(os.getenv("MEMORY_CONTEXT_WINDOW", "10"))
-DEFAULT_PRICES = {"sentiment_report": 0.05, "trade_signal": 0.03, "market_report": 0.08}
+DEFAULT_PRICES = {"sentiment_report": 0.05, "trade_signal": 0.03, "market_report": 0.08, "code_generation": 0.10}
 SERVER_PAYMENT_ADDRESS: str = os.getenv("SERVER_PAYMENT_ADDRESS", "")
 
 
@@ -52,7 +52,9 @@ _DEMO = {
         '{"chosen_task":"sentiment_report","token":"SOL","reasoning":"Solana ecosystem trending"}',
         '{"chosen_task":"trade_signal","token":"ETH","reasoning":"ETH showing momentum"}',
         '{"chosen_task":"market_report","token":"BTC","reasoning":"BTC commands premium reports"}',
+        '{"chosen_task":"code_generation","token":"SOL","reasoning":"Code generation is highest-paying service"}',
         '{"chosen_task":"sentiment_report","token":"BONK","reasoning":"Meme token volatility"}',
+        '{"chosen_task":"code_generation","token":"ETH","reasoning":"Developers need smart contract code"}',
         '{"chosen_task":"trade_signal","token":"JUP","reasoning":"JUP gaining traction"}',
     ],
     "sentiment": [
@@ -69,6 +71,11 @@ _DEMO = {
         '{"token":"ETH","signal":"HOLD","timeframe":"short_term","confidence":0.65,"risk_level":"low","reasoning":"Consolidating, wait for breakout"}',
         '{"token":"BTC","signal":"BUY","timeframe":"medium_term","confidence":0.80,"risk_level":"low","reasoning":"Post-halving accumulation phase"}',
     ],
+    "code": [
+        '{"language":"python","title":"Solana Balance Checker","code":"from solana.rpc.api import Client\\n\\ndef check_balance(address: str) -> float:\\n    client = Client(\\"https://api.devnet.solana.com\\")\\n    resp = client.get_balance(address)\\n    return resp.value / 1e9\\n\\n# Usage\\nprint(check_balance(\\"your_address\\"))","explanation":"Simple utility to check SOL balance on devnet","complexity":"simple"}',
+        '{"language":"javascript","title":"Token Price Fetcher","code":"async function getPrice(token) {\\n  const res = await fetch(`https://api.jup.ag/price/v2?ids=${token}`);\\n  const data = await res.json();\\n  return data.data[token]?.price || 0;\\n}\\n\\ngetPrice(\\"So11111111111111111111111111111111111111112\\").then(console.log);","explanation":"Fetches real-time token prices from Jupiter API","complexity":"simple"}',
+        '{"language":"rust","title":"PDA Derivation Helper","code":"use solana_program::pubkey::Pubkey;\\n\\nfn derive_pda(seeds: &[&[u8]], program_id: &Pubkey) -> (Pubkey, u8) {\\n    Pubkey::find_program_address(seeds, program_id)\\n}","explanation":"Helper function to derive PDAs for Solana programs","complexity":"simple"}',
+    ],
 }
 
 
@@ -82,6 +89,8 @@ def _pick_demo(messages: list[dict]) -> str:
         return random.choice(_DEMO["report"])
     elif "signal" in sys_msg or "trading" in sys_msg:
         return random.choice(_DEMO["signal"])
+    elif "code" in sys_msg or "engineer" in sys_msg or "generate" in sys_msg:
+        return random.choice(_DEMO["code"])
     return random.choice(_DEMO["think"])
 
 

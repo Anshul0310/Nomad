@@ -1,7 +1,7 @@
 """
 Actor Node — Executes the task chosen by the Thinker.
 
-Dispatches to the appropriate tool (sentiment, report, trade signal)
+Dispatches to the appropriate tool (sentiment, report, trade signal, code gen)
 and returns the result.
 """
 
@@ -12,6 +12,7 @@ from agent.state import AgentState
 from agent.tools.sentiment import analyze_sentiment
 from agent.tools.report import generate_report
 from agent.tools.trade_signal import generate_trade_signal
+from agent.tools.code_gen import generate_code
 from agent.memory.store import MemoryStore
 
 
@@ -29,6 +30,11 @@ TASK_HANDLERS = {
     "trade_signal": lambda params: generate_trade_signal(
         token=params.get("token", "SOL"),
         timeframe=params.get("timeframe", "short_term"),
+        context=params.get("context", ""),
+    ),
+    "code_generation": lambda params: generate_code(
+        prompt=params.get("prompt", params.get("reasoning", "Write a useful utility")),
+        language=params.get("language", "python"),
         context=params.get("context", ""),
     ),
 }

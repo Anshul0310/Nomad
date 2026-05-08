@@ -3,18 +3,19 @@ import { motion } from "framer-motion"
 import { useSimulatedServices } from "@/hooks/useSimulatedData"
 import { useServiceTrigger } from "@/hooks/useAgentAPI"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
-import { Brain, Image, BarChart3, Shield, Zap, Clock, Users, Wallet } from "lucide-react"
+import { Brain, Image, BarChart3, Shield, Code2, Zap, Clock, Users, Wallet } from "lucide-react"
 
 const iconMap = {
   brain: Brain,
   image: Image,
   chart: BarChart3,
   shield: Shield,
+  code: Code2,
 }
 
 const gradients = [
   "from-[#7c3aed] to-[#2563eb]",
-  "from-pink-500 to-rose-500",
+  "from-amber-500 to-orange-500",
   "from-cyan-500 to-blue-500",
   "from-emerald-500 to-teal-500",
 ]
@@ -27,7 +28,7 @@ export function ServiceInteraction() {
 
   const serviceNameMap = {
     "Sentiment Analysis": "sentiment_report",
-    "AI Image Generation": "market_report",
+    "Code Generation": "code_generation",
     "Data Analysis Report": "market_report",
     "Smart Contract Audit": "trade_signal",
   }

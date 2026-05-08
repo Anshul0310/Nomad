@@ -196,6 +196,7 @@ The agent runs a **LangGraph decision loop** that cycles through four nodes:
 | Sentiment Analysis | 0.05 SOL | Crypto market sentiment from social data |
 | Trade Signal | 0.03 SOL | Buy/Hold/Sell recommendation with confidence |
 | Market Report | 0.08 SOL | Full market analysis with risk factors |
+| **Code Generation** | **0.10 SOL** | **Production-quality code in Python, JS, Rust, Solidity** |
 
 ```
 agent/
@@ -212,7 +213,8 @@ agent/
 ├── tools/
 │   ├── sentiment.py    # Sentiment analysis tool
 │   ├── report.py       # Market report generator
-│   └── trade_signal.py # Trade signal generator
+│   ├── trade_signal.py # Trade signal generator
+│   └── code_gen.py     # Code generation tool (Python, JS, Rust, Solidity)
 ├── wallet/
 │   └── solana_wallet.py # Solana wallet wrapper
 └── memory/

@@ -238,8 +238,8 @@ def get_bounties():
 
 @app.post("/api/service/{service_name}")
 def trigger_service(service_name: str):
-    """Trigger a service (sentiment, report, signal)."""
-    valid = {"sentiment_report", "market_report", "trade_signal"}
+    """Trigger a service (sentiment, report, signal, code)."""
+    valid = {"sentiment_report", "market_report", "trade_signal", "code_generation"}
     if service_name not in valid:
         return JSONResponse({"error": f"Unknown service: {service_name}"}, status_code=400)
 
@@ -256,6 +256,9 @@ def trigger_service(service_name: str):
         elif service_name == "trade_signal":
             from agent.tools.trade_signal import generate_trade_signal
             result = generate_trade_signal(token="SOL")
+        elif service_name == "code_generation":
+            from agent.tools.code_gen import generate_code
+            result = generate_code(prompt="Write a Solana token transfer function", language="python")
         else:
             result = {"error": "Unknown service"}
 

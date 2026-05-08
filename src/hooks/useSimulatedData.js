@@ -182,12 +182,12 @@ export function useSimulatedServices() {
     },
     {
       id: 2,
-      name: "AI Image Generation",
-      description: "Generate high-quality images from text prompts using the Nomad AI's compute infrastructure.",
-      price: "0.12 SOL",
-      icon: "image",
-      avgTime: "~45s",
-      totalCalls: 893,
+      name: "Code Generation",
+      description: "AI writes production-quality code in Python, JavaScript, Rust, or Solidity. Smart contracts, scripts, and utilities.",
+      price: "0.10 SOL",
+      icon: "code",
+      avgTime: "~15s",
+      totalCalls: 1893,
     },
     {
       id: 3,
