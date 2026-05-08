@@ -276,6 +276,24 @@ def trigger_service(service_name: str):
         return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
 
 
+@app.post("/api/network/{network}")
+def switch_api_network(network: str):
+    """Switch the Solana network (devnet, testnet, mainnet)."""
+    valid = {"devnet", "testnet", "mainnet"}
+    if network not in valid:
+        return JSONResponse({"error": f"Invalid network: {network}"}, status_code=400)
+
+    try:
+        config.switch_network(network)
+        with _lock:
+            _state["network"] = network
+            _state["status"] = f"reconnecting_to_{network}"
+        _add_activity("system", f"🌐 Switched network to {network.upper()}")
+        return JSONResponse({"status": "success", "network": network})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def start_server(port: int = 8000):

@@ -1,7 +1,8 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
-import { Wallet, Activity, ShoppingBag, Award, BarChart3, Menu, X } from "lucide-react"
+import { Wallet, Activity, ShoppingBag, Award, BarChart3, Menu, X, ChevronDown, Globe } from "lucide-react"
+import { useWalletData, useNetworkSwitch } from "@/hooks/useAgentAPI"
 
 const navItems = [
   { label: "Dashboard", href: "#dashboard", icon: BarChart3 },
@@ -13,7 +14,11 @@ const navItems = [
 export function Navbar() {
   const [walletConnected, setWalletConnected] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const [scrolled, setScrolled] = React.useState(false)
+  const { network } = useWalletData()
+  const { switchNetwork, switching } = useNetworkSwitch()
+  const [networkDropdown, setNetworkDropdown] = React.useState(false)
+  
+  const currentNetwork = network || "devnet"
 
   React.useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50)
@@ -50,6 +55,47 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Network Switcher */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => setNetworkDropdown(!networkDropdown)}
+              disabled={switching}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/80"
+            >
+              <Globe className="w-4 h-4 text-emerald-400" />
+              {switching ? "Switching..." : currentNetwork.charAt(0).toUpperCase() + currentNetwork.slice(1)}
+              <ChevronDown className={`w-3 h-3 transition-transform ${networkDropdown ? "rotate-180" : ""}`} />
+            </button>
+            
+            <AnimatePresence>
+              {networkDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute right-0 mt-2 w-36 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
+                >
+                  {["devnet", "testnet", "mainnet"].map((net) => (
+                    <button
+                      key={net}
+                      onClick={() => {
+                        switchNetwork(net)
+                        setNetworkDropdown(false)
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        currentNetwork === net 
+                          ? "bg-white/10 text-white font-medium" 
+                          : "text-white/60 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {net.charAt(0).toUpperCase() + net.slice(1)}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Wallet connect */}
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -102,13 +148,31 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
-            <button
-              onClick={() => { setWalletConnected(!walletConnected); setMobileOpen(false) }}
-              className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white"
-            >
-              <Wallet className="w-4 h-4" />
-              {walletConnected ? "Disconnect" : "Connect Wallet"}
-            </button>
+            <div className="pt-2 border-t border-white/10 mt-2">
+              <p className="text-xs text-white/40 mb-2 px-2 uppercase tracking-wider">Network</p>
+              <div className="flex gap-2 mb-4 px-2">
+                {["devnet", "testnet", "mainnet"].map((net) => (
+                  <button
+                    key={net}
+                    onClick={() => { switchNetwork(net); setMobileOpen(false) }}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      currentNetwork === net 
+                        ? "bg-white/20 text-white" 
+                        : "bg-white/5 text-white/50"
+                    }`}
+                  >
+                    {net.charAt(0).toUpperCase() + net.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setWalletConnected(!walletConnected); setMobileOpen(false) }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white"
+              >
+                <Wallet className="w-4 h-4" />
+                {walletConnected ? "Disconnect" : "Connect Wallet"}
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

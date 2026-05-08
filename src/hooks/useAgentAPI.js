@@ -142,5 +142,28 @@ export function useServiceTrigger() {
   return { trigger, loading, lastResult }
 }
 
+// ── Network Switch Hook ─────────────────────────────────────────────────────
+
+export function useNetworkSwitch() {
+  const [switching, setSwitching] = useState(false)
+
+  const switchNetwork = useCallback(async (network) => {
+    setSwitching(true)
+    try {
+      const res = await fetch(`${API_BASE}/network/${network}`, {
+        method: "POST",
+        signal: AbortSignal.timeout(5000),
+      })
+      return await res.json()
+    } catch (err) {
+      return { status: "error", error: err.message }
+    } finally {
+      setSwitching(false)
+    }
+  }, [])
+
+  return { switchNetwork, switching }
+}
+
 // Re-export the chart hook (no API equivalent needed)
 export { useBalanceHistory } from "./useSimulatedData"
