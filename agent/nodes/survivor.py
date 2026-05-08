@@ -1,5 +1,5 @@
 """
-Survivor Node — The Sovereign AI's self-preservation logic.
+Survivor Node — The Nomad AI's self-preservation logic.
 
 Checks the "runway" (how long the AI can survive with current funds),
 decides whether to:

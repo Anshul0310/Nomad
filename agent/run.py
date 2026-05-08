@@ -1,5 +1,5 @@
 """
-CLI entry point for the Sovereign AI Agent.
+CLI entry point for the Nomad AI Agent.
 
 Usage:
     python -m agent.run                    # Run autonomous loop (default 5 cycles for demo)
@@ -20,7 +20,7 @@ console = Console()
 
 def main():
     parser = argparse.ArgumentParser(
-        description="🤖 Sovereign AI — Autonomous Agent Core",
+        description="🤖 Nomad AI — Autonomous Agent Core",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

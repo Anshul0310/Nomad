@@ -1,5 +1,5 @@
 """
-Earner Node — Checks if the Sovereign AI got paid for its work.
+Earner Node — Checks if the Nomad AI got paid for its work.
 
 Monitors the Solana wallet for incoming payments and updates
 the financial state.

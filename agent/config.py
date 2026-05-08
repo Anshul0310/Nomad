@@ -1,5 +1,5 @@
 """
-Configuration for the Sovereign AI Agent.
+Configuration for the Nomad AI Agent.
 """
 
 import os
@@ -26,7 +26,8 @@ RUNWAY_WARNING_HOURS: float = float(os.getenv("RUNWAY_WARNING_HOURS", "24"))
 RUNWAY_CRITICAL_HOURS: float = float(os.getenv("RUNWAY_CRITICAL_HOURS", "6"))
 MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "50"))
 LOOP_DELAY_SECONDS: int = int(os.getenv("LOOP_DELAY_SECONDS", "5"))
-MEMORY_DB_PATH: str = os.getenv("MEMORY_DB_PATH", "sovereign_memory.db")
+MEMORY_DB_PATH: str = os.getenv("MEMORY_DB_PATH", "nomad_memory.db")
+PROGRAM_ID: str = os.getenv("PROGRAM_ID", "Cm9ugYjV24DuiizVUNvAtKoQfq2fZRNqMtLWTezFoDSP")
 MEMORY_CONTEXT_WINDOW: int = int(os.getenv("MEMORY_CONTEXT_WINDOW", "10"))
 DEFAULT_PRICES = {"sentiment_report": 0.05, "trade_signal": 0.03, "market_report": 0.08}
 SERVER_PAYMENT_ADDRESS: str = os.getenv("SERVER_PAYMENT_ADDRESS", "")

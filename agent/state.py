@@ -12,7 +12,7 @@ from langchain_core.messages import BaseMessage
 
 class AgentState(TypedDict):
     """
-    The central state flowing through the Sovereign AI's decision graph.
+    The central state flowing through the Nomad AI's decision graph.
     
     Fields:
         messages:         Full conversation history with the LLM.

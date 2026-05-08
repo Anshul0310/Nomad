@@ -1,6 +1,6 @@
 import * as React from "react"
 import { motion } from "framer-motion"
-import { useSimulatedBounties } from "@/hooks/useSimulatedData"
+import { useBountyData } from "@/hooks/useAgentAPI"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
 import { Award, Clock, ExternalLink, Tag, User, CheckCircle2 } from "lucide-react"
 
@@ -25,7 +25,7 @@ function timeAgo(date) {
 }
 
 export function BountyBoard() {
-  const bounties = useSimulatedBounties()
+  const bounties = useBountyData()
 
   return (
     <section id="bounties" className="relative py-24 bg-[#020204] overflow-hidden">

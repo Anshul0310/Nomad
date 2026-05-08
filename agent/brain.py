@@ -1,5 +1,5 @@
 """
-Brain — The Sovereign AI's LangGraph Decision Loop.
+Brain — The Nomad AI's LangGraph Decision Loop.
 
 This is the MAIN MODULE that teammates import and call.
 
@@ -84,7 +84,7 @@ def route_after_survive(state: AgentState) -> str:
 
 def create_agent() -> StateGraph:
     """
-    Build and compile the Sovereign AI's LangGraph decision loop.
+    Build and compile the Nomad AI's LangGraph decision loop.
     
     Returns:
         A compiled LangGraph that can be invoked with an initial state.
@@ -190,7 +190,7 @@ def print_startup(wallet: SolanaWallet) -> None:
     console.print()
     console.print(
         Panel.fit(
-            "[bold cyan]🤖 SOVEREIGN AI — AGENT CORE[/bold cyan]\n"
+            "[bold cyan]🤖 NOMAD AI — AGENT CORE[/bold cyan]\n"
             "[dim]Autonomous • Self-Sustaining • Unstoppable[/dim]",
             border_style="cyan",
         )
@@ -229,7 +229,7 @@ def print_cycle_log(state: AgentState) -> None:
 
 def run_autonomous_loop(max_cycles: int = 0) -> None:
     """
-    Run the Sovereign AI in a continuous autonomous loop.
+    Run the Nomad AI in a continuous autonomous loop.
     
     Each "cycle" is a full Think→Act→Earn→Survive pass.
     The agent will keep running until:
@@ -303,6 +303,6 @@ def run_autonomous_loop(max_cycles: int = 0) -> None:
             f"Runway: {state.get('runway_hours', 0):.1f} hours\n"
             f"Iterations: {state.get('iteration', 0)}",
             border_style="cyan",
-            title="🤖 Sovereign AI — Shutdown",
+            title="🤖 Nomad AI — Shutdown",
         )
     )

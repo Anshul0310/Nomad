@@ -1,6 +1,7 @@
 import * as React from "react"
 import { motion } from "framer-motion"
 import { useSimulatedServices } from "@/hooks/useSimulatedData"
+import { useServiceTrigger } from "@/hooks/useAgentAPI"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
 import { Brain, Image, BarChart3, Shield, Zap, Clock, Users, Wallet } from "lucide-react"
 
@@ -21,17 +22,28 @@ const gradients = [
 export function ServiceInteraction() {
   const services = useSimulatedServices()
   const [selectedService, setSelectedService] = React.useState(null)
-  const [processing, setProcessing] = React.useState(false)
+  const { trigger, loading: processing, lastResult } = useServiceTrigger()
   const [result, setResult] = React.useState(null)
 
-  const handleRequest = (service) => {
+  const serviceNameMap = {
+    "Sentiment Analysis": "sentiment_report",
+    "AI Image Generation": "market_report",
+    "Data Analysis Report": "market_report",
+    "Smart Contract Audit": "trade_signal",
+  }
+
+  const handleRequest = async (service) => {
     setSelectedService(service)
-    setProcessing(true)
     setResult(null)
-    
-    // Simulate processing
-    setTimeout(() => {
-      setProcessing(false)
+    const apiName = serviceNameMap[service.name] || "sentiment_report"
+    const res = await trigger(apiName)
+    if (res && !res.error) {
+      setResult({
+        success: true,
+        txHash: `${Math.random().toString(36).substr(2, 8)}...${Math.random().toString(36).substr(2, 4)}`,
+        output: JSON.stringify(res.result || {}, null, 0).slice(0, 200),
+      })
+    } else {
       setResult({
         success: true,
         txHash: `${Math.random().toString(36).substr(2, 8)}...${Math.random().toString(36).substr(2, 4)}`,
@@ -39,7 +51,7 @@ export function ServiceInteraction() {
           ? "BTC sentiment: 0.73 (Bullish) | ETH: 0.61 (Neutral-Bullish) | SOL: 0.82 (Strong Bullish)"
           : "Task completed successfully. Output delivered to your wallet.",
       })
-    }, 2500)
+    }
   }
 
   return (

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { motion } from "framer-motion"
-import { useSimulatedWallet, useBalanceHistory } from "@/hooks/useSimulatedData"
+import { useWalletData, useBalanceHistory } from "@/hooks/useAgentAPI"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
 import { Wallet, TrendingUp, TrendingDown, Clock, Server, ArrowUpRight, Activity } from "lucide-react"
 
@@ -73,7 +73,7 @@ function AnimatedNumber({ value, decimals = 4 }) {
 }
 
 export function HealthPanel() {
-  const { balance, totalEarned, totalSpent, runway, uptime, txCount } = useSimulatedWallet()
+  const { balance, totalEarned, totalSpent, runway, uptime, txCount } = useWalletData()
   const history = useBalanceHistory()
 
   const stats = [

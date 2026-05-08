@@ -1,6 +1,6 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useSimulatedActivity } from "@/hooks/useSimulatedData"
+import { useActivityData } from "@/hooks/useAgentAPI"
 import { Coins, Brain, Server, AlertCircle, ChevronDown } from "lucide-react"
 
 const typeConfig = {
@@ -15,7 +15,7 @@ function formatTime(date) {
 }
 
 export function ActivityFeed() {
-  const activities = useSimulatedActivity()
+  const activities = useActivityData()
   const [expanded, setExpanded] = React.useState(false)
   const displayedActivities = expanded ? activities : activities.slice(0, 8)
 

@@ -1,5 +1,5 @@
 """
-Solana Wallet — The Sovereign AI's autonomous bank account.
+Solana Wallet — The Nomad AI's autonomous bank account.
 
 Handles balance checks, sending SOL for compute costs, and monitoring
 incoming payments.  Defaults to devnet; call switch_network("mainnet")
@@ -27,7 +27,7 @@ LAMPORTS_PER_SOL = 1_000_000_000
 
 class SolanaWallet:
     """
-    Wrapper around solana-py for the Sovereign AI's wallet.
+    Wrapper around solana-py for the Nomad AI's wallet.
     
     Usage:
         wallet = SolanaWallet()             # uses config defaults
