@@ -213,6 +213,8 @@ export function AgentEconomy() {
   const [fundAmount, setFundAmount] = React.useState("3")
   const [funding, setFunding] = React.useState(false)
   const [fundResult, setFundResult] = React.useState(null)
+  const [distributing, setDistributing] = React.useState(false)
+  const [distResult, setDistResult] = React.useState(null)
   
   const displayedTx = showAllTx ? transactions : transactions.slice(0, 5)
   
@@ -258,6 +260,28 @@ export function AgentEconomy() {
       setFundResult({ success: false, error: err.message })
     }
     setFunding(false)
+  }
+
+  // Distribute profits: 60% user, 25% upgrade, 15% services
+  const handleDistribute = async () => {
+    if (!wallet.connected || !wallet.address) return
+    setDistributing(true)
+    setDistResult(null)
+    try {
+      const res = await fetch(`http://localhost:8000/api/distribute?user_wallet=${wallet.address}`, {
+        method: "POST",
+        signal: AbortSignal.timeout(20000),
+      })
+      const data = await res.json()
+      if (data.status === "success") {
+        setDistResult(data)
+      } else {
+        setDistResult({ error: data.error || "Distribution failed" })
+      }
+    } catch (err) {
+      setDistResult({ error: err.message || "Backend unreachable" })
+    }
+    setDistributing(false)
   }
   
   // Determine health status
@@ -524,6 +548,84 @@ export function AgentEconomy() {
                     <div className="text-[9px] text-white/15 font-mono mt-1 truncate">Agent: {AGENT_WALLET}</div>
                   </div>
                 </div>
+              </div>
+            </GlowingEffect>
+          </motion.div>
+
+          {/* Profit Distribution */}
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.18 }} className="lg:col-span-5">
+            <GlowingEffect>
+              <div className="p-6">
+                <h3 className="text-sm font-outfit font-semibold text-white mb-4 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" /> Profit Distribution
+                </h3>
+
+                {/* Split bars */}
+                <div className="flex items-center gap-1 h-6 rounded-lg overflow-hidden mb-4">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center" style={{ width: "60%" }}>
+                    <span className="text-[9px] font-mono font-bold text-white">60% You</span>
+                  </div>
+                  <div className="h-full bg-gradient-to-r from-[#7c3aed] to-[#9333ea] flex items-center justify-center" style={{ width: "25%" }}>
+                    <span className="text-[9px] font-mono font-bold text-white">25% Upgrade</span>
+                  </div>
+                  <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center" style={{ width: "15%" }}>
+                    <span className="text-[9px] font-mono font-bold text-white">15% Services</span>
+                  </div>
+                </div>
+
+                {/* Amount preview + button */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-center">
+                    <div className="text-[10px] text-emerald-400/60 font-mono uppercase">Your Share (60%)</div>
+                    <div className="text-lg font-mono font-bold text-emerald-400">{(state.netProfit * 0.6).toFixed(4)}</div>
+                    <div className="text-[9px] text-white/20">SOL → Your wallet</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/10 text-center">
+                    <div className="text-[10px] text-[#7c3aed]/60 font-mono uppercase">Self-Upgrade (25%)</div>
+                    <div className="text-lg font-mono font-bold text-[#a78bfa]">{(state.netProfit * 0.25).toFixed(4)}</div>
+                    <div className="text-[9px] text-white/20">SOL → Agent fund</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+                    <div className="text-[10px] text-amber-400/60 font-mono uppercase">Services (15%)</div>
+                    <div className="text-lg font-mono font-bold text-amber-400">{(state.netProfit * 0.15).toFixed(4)}</div>
+                    <div className="text-[9px] text-white/20">SOL → Operations</div>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      onClick={handleDistribute}
+                      disabled={distributing || !wallet.connected || state.netProfit <= 0}
+                      className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${distributing || !wallet.connected || state.netProfit <= 0 ? "bg-white/5 text-white/20 cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]"}`}
+                    >
+                      {distributing ? "Distributing..." : !wallet.connected ? "Connect Wallet" : state.netProfit <= 0 ? "No Profit Yet" : "Distribute Profits"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Result */}
+                {distResult?.signature && (
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div className="text-xs text-emerald-400 font-semibold mb-1">✓ Distributed successfully!</div>
+                    <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-white/40 mb-2">
+                      <span>You: +{distResult.user_share?.toFixed(4)} SOL</span>
+                      <span>Upgrade: +{distResult.upgrade_share?.toFixed(4)} SOL</span>
+                      <span>Services: +{distResult.services_share?.toFixed(4)} SOL</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/30">TX:</span>
+                      <a href={explorerUrl(distResult.signature)} target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] text-[#7c3aed] hover:text-[#9b5de5] font-mono flex items-center gap-1">
+                        {distResult.signature.slice(0,20)}...{distResult.signature.slice(-8)}
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                      <button onClick={() => copyTxId(distResult.signature)} className="text-white/20 hover:text-white/50">
+                        {copiedTx === distResult.signature ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {distResult?.error && (
+                  <div className="text-xs text-rose-400 font-mono">✗ {distResult.error}</div>
+                )}
               </div>
             </GlowingEffect>
           </motion.div>

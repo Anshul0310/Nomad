@@ -323,6 +323,71 @@ def pay_for_service():
         }, status_code=500)
 
 
+@app.post("/api/distribute")
+def distribute_profits(user_wallet: str = None):
+    """
+    Distribute agent profits:
+      60% → user's wallet (real SOL transfer)
+      25% → self-upgrade fund (stays in agent wallet)
+      15% → services fund (stays in agent wallet)
+    Returns the real TX signature for the 60% payout.
+    """
+    if not user_wallet:
+        from fastapi import Request
+        return JSONResponse({"error": "user_wallet required"}, status_code=400)
+
+    try:
+        from agent.wallet.solana_wallet import SolanaWallet
+        wallet = SolanaWallet()
+        balance = wallet.get_balance(force=True)
+
+        # Calculate distributable profit (keep 0.01 SOL for fees)
+        profit = max(0, balance - 0.01)
+        if profit < 0.001:
+            return JSONResponse({
+                "status": "error",
+                "error": f"No profit to distribute. Balance: {balance:.4f} SOL",
+                "balance": balance,
+            }, status_code=400)
+
+        # Split
+        user_share = round(profit * 0.60, 9)
+        upgrade_share = round(profit * 0.25, 9)
+        services_share = round(profit * 0.15, 9)
+
+        if user_share < 0.000001:
+            return JSONResponse({
+                "status": "error",
+                "error": "User share too small to send",
+            }, status_code=400)
+
+        # Send 60% to user
+        sig = wallet.send_sol(user_wallet, user_share)
+
+        with _lock:
+            _state["total_distributed"] = _state.get("total_distributed", 0) + user_share
+            _state["wallet_balance"] = wallet.get_balance(force=True)
+            _state["tx_count"] += 1
+
+        _add_activity("earn", f"📊 Profit distributed: {user_share:.4f} SOL → User ({user_wallet[:8]}...)")
+        _add_activity("system", f"💎 Self-upgrade fund: +{upgrade_share:.4f} SOL")
+        _add_activity("system", f"🔧 Services fund: +{services_share:.4f} SOL")
+
+        return JSONResponse({
+            "status": "success",
+            "signature": sig,
+            "total_profit": profit,
+            "user_share": user_share,
+            "upgrade_share": upgrade_share,
+            "services_share": services_share,
+            "remaining_balance": _state["wallet_balance"],
+            "network": config.SOLANA_NETWORK,
+        })
+
+    except Exception as e:
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
+
 @app.post("/api/network/{network}")
 def switch_api_network(network: str):
     """Switch the Solana network (devnet, testnet, mainnet)."""
