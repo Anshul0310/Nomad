@@ -2,14 +2,10 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSimulatedServices } from "@/hooks/useSimulatedData"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
-import { Brain, BarChart3, Shield, Code2, Zap, Clock, Users, Wallet, Lock, Copy, Check, Terminal } from "lucide-react"
+import { getAllProblemsOrdered, getDifficultyForIndex } from "@/data/codingProblems"
+import { Brain, BarChart3, Shield, Code2, Zap, Clock, Users, Lock, Copy, Check, Terminal, TrendingUp, ExternalLink } from "lucide-react"
 
-const iconMap = {
-  brain: Brain,
-  code: Code2,
-  chart: BarChart3,
-  shield: Shield,
-}
+const iconMap = { brain: Brain, code: Code2, chart: BarChart3, shield: Shield }
 
 const gradients = [
   "from-[#7c3aed] to-[#2563eb]",
@@ -18,138 +14,37 @@ const gradients = [
   "from-emerald-500 to-teal-500",
 ]
 
-// Demo code outputs for when backend is offline
-const DEMO_CODE_OUTPUTS = [
-  {
-    language: "python",
-    title: "Solana Token Transfer",
-    code: `from solana.rpc.api import Client
-from solders.keypair import Keypair
-from solders.system_program import transfer, TransferParams
+// ── Tokenizer for syntax highlighting ──────────────────────────────────────
 
-def send_sol(sender: Keypair, to: str, amount_sol: float):
-    """Transfer SOL to another wallet."""
-    client = Client("https://api.devnet.solana.com")
-    lamports = int(amount_sol * 1e9)
-    
-    tx = transfer(TransferParams(
-        from_pubkey=sender.pubkey(),
-        to_pubkey=Pubkey.from_string(to),
-        lamports=lamports,
-    ))
-    
-    result = client.send_transaction(tx, sender)
-    print(f"✓ Sent {amount_sol} SOL → TX: {result.value}")
-    return result.value`,
-    explanation: "Transfer SOL between wallets on Solana devnet using solana-py",
-    complexity: "medium",
-  },
-  {
-    language: "javascript",
-    title: "Jupiter Token Price Fetcher",
-    code: `async function getTokenPrice(mintAddress) {
-  const url = \`https://api.jup.ag/price/v2?ids=\${mintAddress}\`;
-  const res = await fetch(url);
-  const data = await res.json();
-  
-  const token = data.data[mintAddress];
-  if (!token) throw new Error("Token not found");
-  
-  return {
-    symbol: token.mintSymbol,
-    price: parseFloat(token.price),
-    timestamp: new Date().toISOString(),
-  };
-}
-
-// Usage
-const SOL = "So11111111111111111111111111111111111111112";
-getTokenPrice(SOL).then(p => 
-  console.log(\`\${p.symbol}: $\${p.price}\`)
-);`,
-    explanation: "Fetches real-time token prices from Jupiter aggregator API",
-    complexity: "simple",
-  },
-  {
-    language: "rust",
-    title: "Anchor PDA Derivation",
-    code: `use anchor_lang::prelude::*;
-
-#[derive(Accounts)]
-pub struct InitTreasury<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + Treasury::INIT_SPACE,
-        seeds = [b"treasury", authority.key().as_ref()],
-        bump,
-    )]
-    pub treasury: Account<'info, Treasury>,
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[account]
-#[derive(InitSpace)]
-pub struct Treasury {
-    pub authority: Pubkey,
-    pub balance: u64,
-    pub bump: u8,
-}`,
-    explanation: "Anchor smart contract PDA initialization with treasury account",
-    complexity: "medium",
-  },
-]
-
-// Syntax highlighting — tokenize into React elements (no dangerouslySetInnerHTML needed)
 function tokenizeLine(line, language) {
   const keywords = {
-    python: new Set(["def", "from", "import", "return", "class", "if", "else", "elif", "for", "in", "print", "int", "float", "async", "await", "True", "False", "None", "with", "as", "try", "except", "raise"]),
-    javascript: new Set(["const", "let", "var", "function", "async", "await", "return", "if", "else", "for", "new", "throw", "true", "false", "null", "undefined", "export", "import", "from"]),
-    rust: new Set(["pub", "fn", "use", "let", "mut", "struct", "impl", "return", "if", "else", "for", "in", "self", "Self", "true", "false", "mod", "crate", "super", "where"]),
-    solidity: new Set(["function", "contract", "mapping", "address", "uint256", "public", "external", "view", "returns", "event", "emit", "msg", "payable", "pragma"]),
+    python: new Set(["def","from","import","return","class","if","else","elif","for","in","print","int","float","async","await","True","False","None","with","as","try","except","raise","while","not","and","or","is","lambda","yield","pass","break","continue","self"]),
+    javascript: new Set(["const","let","var","function","async","await","return","if","else","for","new","throw","true","false","null","undefined","export","import","from","while","class","extends","this","typeof","instanceof"]),
+    rust: new Set(["pub","fn","use","let","mut","struct","impl","return","if","else","for","in","self","Self","true","false","mod","crate","super","where","enum","match","loop","while","break","continue","move","ref","type"]),
+    solidity: new Set(["function","contract","mapping","address","uint256","uint","public","external","view","returns","event","emit","msg","payable","pragma","solidity","import","require","memory","calldata","immutable","constructor","modifier"]),
   }
   const kws = keywords[language] || keywords.python
-
-  // Split into tokens: words, strings, numbers, punctuation
   const tokens = []
   let i = 0
   while (i < line.length) {
-    // Comments
-    if ((line[i] === '/' && line[i+1] === '/') || (line[i] === '#' && language === 'python')) {
-      tokens.push({ type: "comment", value: line.slice(i) })
-      break
+    if ((line[i] === '/' && line[i+1] === '/') || (line[i] === '#' && language !== 'rust')) {
+      tokens.push({ type: "comment", value: line.slice(i) }); break
     }
-    // Strings
     if (line[i] === '"' || line[i] === "'" || line[i] === '`') {
-      const q = line[i]
-      let j = i + 1
+      const q = line[i]; let j = i + 1
       while (j < line.length && line[j] !== q) { if (line[j] === '\\') j++; j++ }
-      tokens.push({ type: "string", value: line.slice(i, j + 1) })
-      i = j + 1
-      continue
+      tokens.push({ type: "string", value: line.slice(i, j + 1) }); i = j + 1; continue
     }
-    // Numbers
     if (/\d/.test(line[i]) && (i === 0 || /[\s(,=+\-*/<>[\]{};:]/.test(line[i-1]))) {
-      let j = i
-      while (j < line.length && /[\d.e]/.test(line[j])) j++
-      tokens.push({ type: "number", value: line.slice(i, j) })
-      i = j
-      continue
+      let j = i; while (j < line.length && /[\d.e_]/.test(line[j])) j++
+      tokens.push({ type: "number", value: line.slice(i, j) }); i = j; continue
     }
-    // Words (identifiers / keywords)
     if (/[a-zA-Z_]/.test(line[i])) {
-      let j = i
-      while (j < line.length && /[a-zA-Z0-9_]/.test(line[j])) j++
+      let j = i; while (j < line.length && /[a-zA-Z0-9_]/.test(line[j])) j++
       const word = line.slice(i, j)
-      tokens.push({ type: kws.has(word) ? "keyword" : "ident", value: word })
-      i = j
-      continue
+      tokens.push({ type: kws.has(word) ? "keyword" : "ident", value: word }); i = j; continue
     }
-    // Other characters
-    tokens.push({ type: "plain", value: line[i] })
-    i++
+    tokens.push({ type: "plain", value: line[i] }); i++
   }
   return tokens
 }
@@ -163,62 +58,55 @@ const tokenColors = {
   plain: "text-white/60",
 }
 
+// ── Main Component ─────────────────────────────────────────────────────────
+
 export function ServiceInteraction() {
   const services = useSimulatedServices()
-  const [selectedService, setSelectedService] = React.useState(null)
   const [processing, setProcessing] = React.useState(false)
   const [result, setResult] = React.useState(null)
   const [copied, setCopied] = React.useState(false)
+  const [problemIndex, setProblemIndex] = React.useState(0)
+  const [solveCount, setSolveCount] = React.useState(0)
 
-  const isCodeGeneration = (name) => name === "Code Generation"
+  const allProblems = React.useMemo(() => getAllProblemsOrdered(), [])
+  const totalProblems = allProblems.length
 
-  const handleCodeRequest = async (service) => {
-    setSelectedService(service)
+  const handleCodeRequest = async () => {
     setResult(null)
     setProcessing(true)
 
-    // Try the real backend first
-    try {
-      const res = await fetch("http://localhost:8000/api/service/code_generation", {
-        method: "POST",
-        signal: AbortSignal.timeout(12000),
-      })
-      const data = await res.json()
-      if (data?.result && !data.result.error) {
-        setResult({
-          success: true,
-          data: data.result,
-          txHash: `${Math.random().toString(36).substr(2, 8)}...${Math.random().toString(36).substr(2, 4)}`,
-        })
-        setProcessing(false)
-        return
-      }
-    } catch {
-      // Backend offline — use demo
-    }
+    // Simulate "AI thinking" delay (1.5 - 3s)
+    const thinkTime = 1500 + Math.random() * 1500
+    await new Promise(r => setTimeout(r, thinkTime))
 
-    // Simulate a 2s "thinking" delay then show demo code
-    await new Promise(r => setTimeout(r, 2000))
-    const demo = DEMO_CODE_OUTPUTS[Math.floor(Math.random() * DEMO_CODE_OUTPUTS.length)]
+    const problem = allProblems[problemIndex % totalProblems]
+    const difficulty = getDifficultyForIndex(problemIndex % totalProblems)
+
     setResult({
       success: true,
-      data: demo,
+      problem,
+      difficulty,
       txHash: `${Math.random().toString(36).substr(2, 8)}...${Math.random().toString(36).substr(2, 4)}`,
     })
+
+    // Advance to the next problem for next click
+    setProblemIndex(prev => prev + 1)
+    setSolveCount(prev => prev + 1)
     setProcessing(false)
   }
 
   const handleCopy = () => {
-    if (result?.data?.code) {
-      navigator.clipboard.writeText(result.data.code)
+    if (result?.problem?.code) {
+      navigator.clipboard.writeText(result.problem.code)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
   }
 
+  const currentDifficulty = getDifficultyForIndex(problemIndex % totalProblems)
+
   return (
     <section id="services" className="relative py-24 bg-[#020204] overflow-hidden">
-      {/* Background glow */}
       <div className="absolute top-1/2 left-0 w-[500px] h-[400px] bg-[#2563eb]/5 rounded-full blur-[150px] pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8 z-10">
@@ -245,9 +133,8 @@ export function ServiceInteraction() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {services.map((service, i) => {
             const Icon = iconMap[service.icon] || Brain
-            const isCode = isCodeGeneration(service.name)
+            const isCode = service.name === "Code Generation"
             const isComingSoon = !isCode
-            const isSelected = selectedService?.id === service.id
             
             return (
               <motion.div
@@ -267,14 +154,12 @@ export function ServiceInteraction() {
                         </div>
                         {isComingSoon && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/40 font-mono uppercase tracking-wider">
-                            <Lock className="w-3 h-3" />
-                            Coming Soon
+                            <Lock className="w-3 h-3" /> Coming Soon
                           </span>
                         )}
                         {isCode && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-mono uppercase tracking-wider">
-                            <Zap className="w-3 h-3" />
-                            Live
+                            <Zap className="w-3 h-3" /> Live
                           </span>
                         )}
                       </div>
@@ -292,8 +177,37 @@ export function ServiceInteraction() {
                       <span className="flex items-center gap-1"><Users className="w-3 h-3" />{service.totalCalls.toLocaleString()} calls</span>
                     </div>
 
-                    {/* Code Generation Result Display */}
-                    {isCode && isSelected && (processing || result) && (
+                    {/* ── Code Gen: Progress & Difficulty Bar ── */}
+                    {isCode && (
+                      <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <TrendingUp className="w-4 h-4 text-white/30" />
+                          <span className="text-xs text-white/50 font-mono">
+                            Solved: <span className="text-white font-semibold">{solveCount}</span>/{totalProblems}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-white/30 font-mono">Next:</span>
+                          <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${currentDifficulty.bg} ${currentDifficulty.color}`}>
+                            {currentDifficulty.label}
+                          </span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="hidden sm:flex items-center gap-2">
+                          <div className="w-32 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500"
+                              initial={{ width: "0%" }}
+                              animate={{ width: `${Math.min((problemIndex / totalProblems) * 100, 100)}%` }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Code Gen: Result Display ── */}
+                    {isCode && (processing || result) && (
                       <AnimatePresence>
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
@@ -303,28 +217,38 @@ export function ServiceInteraction() {
                           {processing ? (
                             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
                               <div className="flex items-center gap-3 text-amber-400 font-mono text-sm">
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
+                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
                                   <Zap className="w-4 h-4" />
                                 </motion.div>
-                                <span>Nomad AI is writing code...</span>
+                                <span>Nomad AI is solving a coding challenge...</span>
                               </div>
                               <div className="mt-3 space-y-2">
                                 {[1, 2, 3].map(n => (
-                                  <motion.div
-                                    key={n}
-                                    initial={{ width: "0%" }}
-                                    animate={{ width: `${30 + Math.random() * 60}%` }}
-                                    transition={{ duration: 0.8, delay: n * 0.3 }}
-                                    className="h-3 rounded bg-white/5"
-                                  />
+                                  <motion.div key={n} initial={{ width: "0%" }} animate={{ width: `${30 + Math.random() * 60}%` }}
+                                    transition={{ duration: 0.8, delay: n * 0.3 }} className="h-3 rounded bg-white/5" />
                                 ))}
                               </div>
                             </div>
                           ) : result?.success ? (
                             <div className="rounded-xl overflow-hidden border border-white/10">
+                              {/* Problem statement */}
+                              <div className="px-4 py-3 bg-white/[0.02] border-b border-white/5">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${result.difficulty.bg} ${result.difficulty.color}`}>
+                                      {result.difficulty.label}
+                                    </span>
+                                    <span className="text-xs font-mono text-white/30">{result.problem.source}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-[10px] font-mono text-white/25">
+                                    <span>Time: {result.problem.timeComplexity}</span>
+                                    <span>Space: {result.problem.spaceComplexity}</span>
+                                  </div>
+                                </div>
+                                <h4 className="text-sm font-outfit font-semibold text-white mb-1">{result.problem.title}</h4>
+                                <p className="text-xs text-white/40 font-inter leading-relaxed">{result.problem.problem}</p>
+                              </div>
+
                               {/* Code header */}
                               <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.03] border-b border-white/5">
                                 <div className="flex items-center gap-3">
@@ -335,31 +259,29 @@ export function ServiceInteraction() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Terminal className="w-3.5 h-3.5 text-white/30" />
-                                    <span className="text-xs font-mono text-white/50">{result.data.title}</span>
+                                    <span className="text-xs font-mono text-white/50">solution.{result.problem.language === "python" ? "py" : result.problem.language === "javascript" ? "js" : result.problem.language === "rust" ? "rs" : "sol"}</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-mono text-white/25 uppercase px-2 py-0.5 rounded bg-white/5">
-                                    {result.data.language}
+                                    {result.problem.language}
                                   </span>
-                                  <button
-                                    onClick={handleCopy}
-                                    className="flex items-center gap-1 text-[10px] font-mono text-white/40 hover:text-white/70 px-2 py-1 rounded hover:bg-white/5 transition-colors"
-                                  >
+                                  <button onClick={handleCopy}
+                                    className="flex items-center gap-1 text-[10px] font-mono text-white/40 hover:text-white/70 px-2 py-1 rounded hover:bg-white/5 transition-colors">
                                     {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                                     {copied ? "Copied!" : "Copy"}
                                   </button>
                                 </div>
                               </div>
                               
-                              {/* Code body with syntax highlighting */}
-                              <div className="p-4 bg-[#0a0a0f] overflow-x-auto max-h-[350px] overflow-y-auto custom-scrollbar">
+                              {/* Code body */}
+                              <div className="p-4 bg-[#0a0a0f] overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
                                 <pre className="text-sm font-mono leading-relaxed">
-                                  {result.data.code.split("\n").map((line, idx) => (
+                                  {result.problem.code.split("\n").map((line, idx) => (
                                     <div key={idx} className="flex">
                                       <span className="w-8 text-right text-white/15 select-none mr-4 flex-shrink-0">{idx + 1}</span>
                                       <span>
-                                        {line === "" ? "\u00A0" : tokenizeLine(line, result.data.language).map((tok, ti) => (
+                                        {line === "" ? "\u00A0" : tokenizeLine(line, result.problem.language).map((tok, ti) => (
                                           <span key={ti} className={tokenColors[tok.type] || "text-white/60"}>{tok.value}</span>
                                         ))}
                                       </span>
@@ -371,11 +293,12 @@ export function ServiceInteraction() {
                               {/* Code footer */}
                               <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02] border-t border-white/5">
                                 <div className="flex items-center gap-4 text-[10px] font-mono text-white/30">
-                                  <span className="text-emerald-400">✓ Generated</span>
+                                  <span className="text-emerald-400">✓ Solved</span>
                                   <span>TX: {result.txHash}</span>
-                                  <span className="capitalize">{result.data.complexity} complexity</span>
                                 </div>
-                                <span className="text-[10px] font-mono text-white/20">{result.data.explanation}</span>
+                                <span className="text-[10px] font-mono text-white/20">
+                                  Problem {(problemIndex - 1) % totalProblems + 1} of {totalProblems}
+                                </span>
                               </div>
                             </div>
                           ) : null}
@@ -383,29 +306,25 @@ export function ServiceInteraction() {
                       </AnimatePresence>
                     )}
 
-                    {/* Button */}
+                    {/* ── Buttons ── */}
                     {isCode ? (
                       <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => handleCodeRequest(service)}
-                        disabled={processing && isSelected}
+                        onClick={handleCodeRequest}
+                        disabled={processing}
                         className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                          processing && isSelected
+                          processing
                             ? "bg-white/5 text-white/30 cursor-not-allowed"
                             : "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)]"
                         }`}
                       >
                         <Code2 className="w-4 h-4" />
-                        {processing && isSelected ? "Generating Code..." : `Generate Code — ${service.price}`}
+                        {processing ? "Solving Challenge..." : `Solve Next Challenge — ${services.find(s => s.name === "Code Generation")?.price || "0.10 SOL"}`}
                       </motion.button>
                     ) : (
-                      <button
-                        disabled
-                        className="w-full py-3 rounded-xl text-sm font-semibold bg-white/[0.03] text-white/20 border border-white/5 cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        Coming Soon
+                      <button disabled className="w-full py-3 rounded-xl text-sm font-semibold bg-white/[0.03] text-white/20 border border-white/5 cursor-not-allowed flex items-center justify-center gap-2">
+                        <Lock className="w-3.5 h-3.5" /> Coming Soon
                       </button>
                     )}
                   </div>
