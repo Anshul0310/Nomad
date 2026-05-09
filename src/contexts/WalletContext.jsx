@@ -4,6 +4,7 @@ import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js"
 /**
  * Wallet context — connects to Phantom via window.solana
  * and provides balance, address, and network info to the entire app.
+ * Auto-detects which network has SOL.
  */
 
 const WalletContext = React.createContext({
@@ -45,16 +46,53 @@ export function WalletProvider({ children }) {
   const address = publicKey ? publicKey.toBase58() : ""
   const shortAddress = address ? `${address.slice(0, 4)}...${address.slice(-4)}` : ""
 
-  // Fetch balance when connected
+  // Fetch balance on current network
   const fetchBalance = React.useCallback(async () => {
-    if (!publicKey || !connection) return
+    if (!publicKey) return
     try {
-      const lamports = await connection.getBalance(publicKey)
-      setBalance(lamports / LAMPORTS_PER_SOL)
+      const conn = new Connection(RPC_URLS[network] || RPC_URLS.devnet, "confirmed")
+      const lamports = await conn.getBalance(publicKey)
+      const sol = lamports / LAMPORTS_PER_SOL
+      console.log(`[Wallet] Balance on ${network}: ${sol} SOL`)
+      setBalance(sol)
     } catch (err) {
-      console.warn("Failed to fetch balance:", err)
+      console.warn(`[Wallet] Failed to fetch balance on ${network}:`, err.message)
+      setBalance(0)
     }
-  }, [publicKey, connection])
+  }, [publicKey, network])
+
+  // When wallet first connects, scan all networks to find SOL
+  const detectBestNetwork = React.useCallback(async (pk) => {
+    if (!pk) return
+    console.log("[Wallet] Scanning all networks for SOL...")
+
+    const results = []
+    for (const [net, url] of Object.entries(RPC_URLS)) {
+      try {
+        const conn = new Connection(url, "confirmed")
+        const lamports = await conn.getBalance(pk)
+        const sol = lamports / LAMPORTS_PER_SOL
+        console.log(`[Wallet] ${net}: ${sol} SOL`)
+        results.push({ net, sol })
+      } catch (err) {
+        console.warn(`[Wallet] ${net} failed:`, err.message)
+        results.push({ net, sol: 0 })
+      }
+    }
+
+    // Pick the network with the most SOL
+    results.sort((a, b) => b.sol - a.sol)
+    const best = results[0]
+    if (best && best.sol > 0) {
+      console.log(`[Wallet] Best network: ${best.net} with ${best.sol} SOL`)
+      setNetwork(best.net)
+      setBalance(best.sol)
+    } else {
+      // Default to devnet, show 0
+      console.log("[Wallet] No SOL found on any network, defaulting to devnet")
+      setBalance(0)
+    }
+  }, [])
 
   // Poll balance every 10s
   React.useEffect(() => {
@@ -63,11 +101,6 @@ export function WalletProvider({ children }) {
     const interval = setInterval(fetchBalance, 10000)
     return () => clearInterval(interval)
   }, [connected, publicKey, fetchBalance])
-
-  // Re-fetch on network change
-  React.useEffect(() => {
-    if (connected && publicKey) fetchBalance()
-  }, [network, connected, publicKey, fetchBalance])
 
   const connect = async () => {
     const provider = window?.solana
@@ -79,8 +112,12 @@ export function WalletProvider({ children }) {
     setConnecting(true)
     try {
       const resp = await provider.connect()
-      setPublicKey(resp.publicKey)
+      const pk = resp.publicKey
+      console.log("[Wallet] Connected:", pk.toBase58())
+      setPublicKey(pk)
       setConnected(true)
+      // Auto-detect best network
+      await detectBestNetwork(pk)
     } catch (err) {
       console.error("Wallet connection failed:", err)
     }
@@ -106,13 +143,33 @@ export function WalletProvider({ children }) {
       if (pk) {
         setPublicKey(pk)
         setConnected(true)
+        detectBestNetwork(pk)
       } else {
         disconnect()
       }
     }
     provider.on("accountChanged", onAccountChange)
     return () => provider.off("accountChanged", onAccountChange)
-  }, [])
+  }, [detectBestNetwork])
+
+  // Try to eagerly connect (auto-reconnect if previously approved)
+  React.useEffect(() => {
+    const tryEagerConnect = async () => {
+      const provider = window?.solana
+      if (!provider?.isPhantom) return
+      try {
+        const resp = await provider.connect({ onlyIfTrusted: true })
+        const pk = resp.publicKey
+        console.log("[Wallet] Eager reconnect:", pk.toBase58())
+        setPublicKey(pk)
+        setConnected(true)
+        await detectBestNetwork(pk)
+      } catch {
+        // User hasn't approved before — that's fine
+      }
+    }
+    tryEagerConnect()
+  }, [detectBestNetwork])
 
   const value = {
     connected,
