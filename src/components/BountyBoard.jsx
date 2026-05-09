@@ -56,9 +56,7 @@ export function BountyBoard() {
           <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white text-center">
             Bounty <span className="text-gradient">Board</span>
           </h2>
-          <p className="text-center text-white/40 mt-3 font-inter">
-            The AI hires humans. Complete tasks, earn SOL — paid by the agent&apos;s smart contract.
-          </p>
+
         </motion.div>
 
         <div className="space-y-4 max-w-4xl mx-auto">
