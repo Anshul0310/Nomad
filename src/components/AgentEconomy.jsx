@@ -1,59 +1,139 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
+import { useWallet } from "@/contexts/WalletContext"
+import { LAMPORTS_PER_SOL } from "@solana/web3.js"
 import {
   Brain, Cpu, Flame, TrendingUp, TrendingDown, AlertTriangle,
   CheckCircle2, XCircle, Clock, ArrowDownLeft, ArrowUpRight,
   Zap, Shield, Activity, CircleDollarSign, Timer, BarChart3,
-  ExternalLink, Copy, Check
+  ExternalLink, Copy, Check, WalletIcon
 } from "lucide-react"
 
-// ── Simulated economy state ────────────────────────────────────────────────
+// ── Real + fallback economy state ──────────────────────────────────────────
+
+function timeAgo(timestamp) {
+  const seconds = Math.floor((Date.now() / 1000) - timestamp)
+  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
+}
 
 function useAgentEconomy() {
-  const [state, setState] = React.useState({
-    status: "running",        // running | idle | critical | offline
-    currentTask: "Code Generation — solving challenge #3",
-    cycle: 4291,
-    // Economy
-    balance: 14.7832,
-    burnRate: 0.0047,         // SOL per hour
-    dailyBurn: 0.1128,
-    dailyEarnings: 0.3200,
-    profitMargin: 64.8,       // percent
-    runway: 131,              // days
-    survivalThreshold: 2.0,   // SOL minimum
-    // Cumulative
-    totalEarned: 8.4210,
-    totalSpent: 3.1578,
-    netProfit: 5.2632,
-    totalTx: 4291,
-  })
+  const { connected, publicKey, balance, connection, network } = useWallet()
+  const [transactions, setTransactions] = React.useState([])
+  const [loading, setLoading] = React.useState(false)
+  const [totalIn, setTotalIn] = React.useState(0)
+  const [totalOut, setTotalOut] = React.useState(0)
+  const [txCount, setTxCount] = React.useState(0)
 
-  const [transactions, setTransactions] = React.useState([
-    { id: "tx1", type: "earn", amount: 0.10, desc: "Code Generation — REST API Health Check", time: "2m ago", sig: "5xKpR9mNzQv7bW3cYd8fGhJkLpTrVs2nMqXw4eAzBu6tCyDi1jF8oU5sHa" },
-    { id: "tx2", type: "spend", amount: 0.0012, desc: "Solana TX fee — service delivery", time: "2m ago", sig: "3bRq7wLpNk2sVfXm5tG9hYcE4dJrKuAz8pQiW6oBn1jMaC3eFlTxRy0vHg" },
-    { id: "tx3", type: "earn", amount: 0.05, desc: "Sentiment Analysis — BTC market report", time: "8m ago", sig: "9vMn2kDsHf4pBwLr7tXjQcG1eAzYi5oNmK8sCu3bRxWa6dJgVh0lTqFyEp" },
-    { id: "tx4", type: "spend", amount: 0.0034, desc: "Compute cost — GPU inference (Akash)", time: "8m ago", sig: "1pLx4jHrWn8cFv2mBqKs5tDg7eAzYiNk3oRuXa6bCw9dGhJlTfMySv0QEp" },
-    { id: "tx5", type: "earn", amount: 0.10, desc: "Code Generation — JWT Auth Middleware", time: "15m ago", sig: "7nBw6tQzRk3cFv9mGhJsLp1eAzYiDx4oKuXa8bMw2dNaCyWl5jHrTfSqEp" },
-    { id: "tx6", type: "spend", amount: 0.0008, desc: "Solana TX fee — token transfer", time: "22m ago", sig: "4dCv8mYsHn1pBwLr6tXjQcG3eAzFiKk5oRuNa9bMx2wDgJhTl7sCfVyEqW" },
-    { id: "tx7", type: "earn", amount: 0.08, desc: "Data Analysis — portfolio report", time: "31m ago", sig: "2fGh5pWxNk7cBvLr4tXjQs9eAzYiDm1oRuKa3bMw8dCgJhTl6sCnFyEqRp" },
-    { id: "tx8", type: "spend", amount: 0.0021, desc: "Compute cost — model inference", time: "35m ago", sig: "8kTr1nJmWf3cBv6pGhLs4eAzYiDx9oKuXa5bMw2dNaCyRl7jHqTfSgEpQw" },
-  ])
-
-  // Simulate live updates
+  // Fetch real transactions from Solana when wallet is connected
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setState(prev => ({
-        ...prev,
-        cycle: prev.cycle + 1,
-        balance: prev.balance + (Math.random() * 0.002 - 0.0005),
-        totalTx: prev.totalTx + 1,
-        burnRate: 0.0047 + (Math.random() * 0.001 - 0.0005),
-      }))
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    if (!connected || !publicKey || !connection) return
+    let cancelled = false
+
+    const fetchTxs = async () => {
+      setLoading(true)
+      try {
+        // Get recent transaction signatures
+        const sigs = await connection.getSignaturesForAddress(publicKey, { limit: 15 })
+        if (cancelled) return
+
+        setTxCount(sigs.length)
+
+        // Fetch full transaction details
+        const txList = []
+        let sumIn = 0, sumOut = 0
+        const pubStr = publicKey.toBase58()
+
+        for (const sigInfo of sigs.slice(0, 10)) {
+          try {
+            const tx = await connection.getTransaction(sigInfo.signature, {
+              maxSupportedTransactionVersion: 0,
+            })
+            if (cancelled || !tx) continue
+
+            const pre = tx.meta?.preBalances || []
+            const post = tx.meta?.postBalances || []
+            const keys = tx.transaction?.message?.staticAccountKeys
+              || tx.transaction?.message?.accountKeys || []
+
+            // Find our account index
+            let idx = -1
+            for (let i = 0; i < keys.length; i++) {
+              if (keys[i].toBase58() === pubStr) { idx = i; break }
+            }
+
+            if (idx >= 0 && pre[idx] !== undefined && post[idx] !== undefined) {
+              const diff = (post[idx] - pre[idx]) / LAMPORTS_PER_SOL
+              const fee = (tx.meta?.fee || 0) / LAMPORTS_PER_SOL
+              const isReceive = diff > 0
+
+              if (isReceive) sumIn += diff
+              else sumOut += Math.abs(diff)
+
+              txList.push({
+                id: sigInfo.signature.slice(0, 8),
+                type: isReceive ? "earn" : "spend",
+                amount: Math.abs(diff),
+                fee,
+                desc: isReceive
+                  ? `Received SOL${diff > 1 ? " (Airdrop)" : ""}`
+                  : `Sent SOL${fee > 0 ? ` (fee: ${fee.toFixed(6)})` : ""}`,
+                time: sigInfo.blockTime ? timeAgo(sigInfo.blockTime) : "recent",
+                sig: sigInfo.signature,
+                slot: sigInfo.slot,
+                err: sigInfo.err,
+              })
+            }
+          } catch {
+            // Skip failed tx parse
+          }
+        }
+
+        if (!cancelled) {
+          setTransactions(txList)
+          setTotalIn(sumIn)
+          setTotalOut(sumOut)
+        }
+      } catch (err) {
+        console.warn("Failed to fetch transactions:", err)
+      }
+      setLoading(false)
+    }
+
+    fetchTxs()
+    const interval = setInterval(fetchTxs, 30000) // refresh every 30s
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [connected, publicKey, connection])
+
+  // Build state from real data or fallback
+  const realBalance = balance ?? 0
+  const burnRate = 0.001 / 24 // HOURLY_COMPUTE_COST / 24
+  const dailyBurn = 0.001
+  const netProfit = totalIn - totalOut
+  const profitMargin = totalIn > 0 ? ((totalIn - totalOut) / totalIn) * 100 : 0
+  const runway = dailyBurn > 0 ? Math.floor(realBalance / dailyBurn) : 999
+
+  const state = {
+    status: connected ? "running" : "offline",
+    currentTask: connected ? "Monitoring wallet activity" : "Wallet not connected",
+    cycle: txCount,
+    balance: realBalance,
+    burnRate,
+    dailyBurn,
+    dailyEarnings: totalIn > 0 ? totalIn / Math.max(1, Math.ceil(txCount / 5)) : 0,
+    profitMargin: Math.max(0, Math.min(100, profitMargin)),
+    runway,
+    survivalThreshold: 0.5,
+    totalEarned: totalIn,
+    totalSpent: totalOut,
+    netProfit,
+    totalTx: txCount,
+    loading,
+    connected,
+  }
 
   return { state, transactions }
 }
@@ -118,16 +198,15 @@ function GaugeRing({ value, max, label, color, icon: Icon, critical }) {
 
 export function AgentEconomy() {
   const { state, transactions } = useAgentEconomy()
+  const wallet = useWallet()
   const [showAllTx, setShowAllTx] = React.useState(false)
   const [copiedTx, setCopiedTx] = React.useState(null)
-  const [expandedTx, setExpandedTx] = React.useState(null)
   
   const displayedTx = showAllTx ? transactions : transactions.slice(0, 5)
   
-  // Network for explorer links (devnet default)
-  const network = "devnet"
+  // Network for explorer links — use real wallet network
+  const network = wallet.network === "mainnet-beta" ? "mainnet-beta" : wallet.network || "devnet"
   const explorerUrl = (sig) => `https://explorer.solana.com/tx/${sig}?cluster=${network}`
-  const truncateSig = (sig) => `${sig.slice(0, 8)}...${sig.slice(-6)}`
   
   const copyTxId = (sig) => {
     navigator.clipboard.writeText(sig)
@@ -165,6 +244,31 @@ export function AgentEconomy() {
             Financial self-awareness — the AI tracks its burn rate, profitability, and survival time in real-time.
           </p>
         </motion.div>
+
+        {/* Connect wallet prompt */}
+        {!state.connected && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-[#7c3aed]/10 to-[#2563eb]/10 border border-[#7c3aed]/20 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-[#7c3aed]/20">
+                <WalletIcon className="w-5 h-5 text-[#7c3aed]" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-outfit font-semibold text-white">Connect your Phantom wallet</div>
+                <div className="text-xs text-white/40">See your real SOL balance, on-chain transactions, and live economy data</div>
+              </div>
+              <button onClick={() => wallet.connect()} className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white text-sm font-semibold hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] transition-shadow">
+                Connect
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading indicator */}
+        {state.loading && (
+          <div className="mb-4 text-center text-xs text-white/30 font-mono animate-pulse">
+            Fetching on-chain data...
+          </div>
+        )}
 
         {/* Top row: Status + Gauges */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
