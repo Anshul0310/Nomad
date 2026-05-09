@@ -6,6 +6,7 @@ import { getAllProblemsOrdered, getDifficultyForIndex } from "@/data/codingProbl
 import { useWallet } from "@/contexts/WalletContext"
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { Brain, BarChart3, Shield, Code2, Zap, Clock, Users, Lock, Copy, Check, Terminal, TrendingUp, ExternalLink, Wallet } from "lucide-react"
+import { API_BASE } from "@/lib/apiConfig"
 
 // Nomad treasury address — receives service fees
 const NOMAD_TREASURY = new PublicKey("Cm9ugYjV24DuiizVUNvAtKoQfq2fZRNqMtLWTezFoDSP")
@@ -122,7 +123,7 @@ export function ServiceInteraction() {
       } else {
         // Auto mode — call backend to send REAL SOL from agent wallet (no popup)
         try {
-          const res = await fetch("http://localhost:8000/api/pay", {
+          const res = await fetch(`${API_BASE}/pay`, {
             method: "POST",
             signal: AbortSignal.timeout(15000),
           })

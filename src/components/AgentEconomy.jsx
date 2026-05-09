@@ -9,6 +9,7 @@ import {
   Zap, Shield, Activity, CircleDollarSign, Timer, BarChart3,
   ExternalLink, Copy, Check, WalletIcon
 } from "lucide-react"
+import { API_BASE, apiFetch } from "@/lib/apiConfig"
 
 // ── Real + fallback economy state ──────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export function AgentEconomy() {
     setDistributing(true)
     setDistResult(null)
     try {
-      const res = await fetch(`http://localhost:8000/api/distribute?user_wallet=${wallet.address}`, {
+      const res = await fetch(`${API_BASE}/distribute?user_wallet=${wallet.address}`, {
         method: "POST",
         signal: AbortSignal.timeout(20000),
       })
@@ -309,7 +310,7 @@ export function AgentEconomy() {
   React.useEffect(() => {
     const fetchAgentWallet = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/agent-wallet")
+        const res = await fetch(`${API_BASE}/agent-wallet`)
         const data = await res.json()
         if (data.address) setAgentAddress(data.address)
         if (data.balance !== undefined) setAgentBalance(data.balance)
@@ -329,7 +330,7 @@ export function AgentEconomy() {
     setSending(true)
     setSendResult(null)
     try {
-      const res = await fetch(`http://localhost:8000/api/agent-wallet/send?to_address=${wallet.address}&amount=${amount}`, {
+      const res = await fetch(`${API_BASE}/agent-wallet/send?to_address=${wallet.address}&amount=${amount}`, {
         method: "POST",
         signal: AbortSignal.timeout(20000),
       })

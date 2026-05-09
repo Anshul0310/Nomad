@@ -6,20 +6,8 @@ import {
   useBalanceHistory,
 } from "./useSimulatedData"
 
-// Direct URL to FastAPI backend — no Vite proxy needed
-const API_BASE = "http://localhost:8000/api"
+import { API_BASE, apiFetch } from "@/lib/apiConfig"
 
-// ── Fetch helper ────────────────────────────────────────────────────────────
-
-async function apiFetch(path) {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(3000) })
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null  // Backend offline → silently fall back
-  }
-}
 
 // ── Wallet Data Hook ────────────────────────────────────────────────────────
 

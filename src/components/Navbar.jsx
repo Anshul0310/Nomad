@@ -2,6 +2,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
 import { useWallet } from "@/contexts/WalletContext"
+import { apiFetch } from "@/lib/apiConfig"
 import { Wallet, Activity, ShoppingBag, Award, BarChart3, Menu, X, ChevronDown, Globe } from "lucide-react"
 
 const navItems = [
@@ -55,11 +56,7 @@ export function Navbar() {
     setNetworkDropdown(false)
 
     // Try to tell backend (silently fails if backend is offline)
-    try {
-      await fetch(`http://localhost:8000/api/network/${net}`, { method: "POST", signal: AbortSignal.timeout(3000) })
-    } catch {
-      // Backend offline — that's fine, the UI still reflects the selection
-    }
+    apiFetch(`/network/${net}`, { method: "POST" })
     // Also update wallet context network
     setWalletNet(net === "mainnet" ? "mainnet-beta" : net)
     setSwitching(false)
