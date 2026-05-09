@@ -1,742 +1,725 @@
-/**
- * Nomad AI — Progressive Coding Problem Bank
- * Problems sourced from real coding challenge patterns (LeetCode, HackerRank, Codeforces style).
- * Organized by difficulty: Easy → Medium → Hard → Expert
- * Each click shows the next unseen problem, getting progressively harder.
- */
-
 export const DIFFICULTY_LEVELS = [
-  { id: "easy",   label: "Easy",   color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  { id: "medium", label: "Medium", color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
-  { id: "hard",   label: "Hard",   color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20" },
-  { id: "expert", label: "Expert", color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },
+  { id: "easy", label: "Beginner", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+  { id: "medium", label: "Intermediate", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  { id: "hard", label: "Advanced", color: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20" },
+  { id: "expert", label: "Production", color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
 ]
 
 export const PROBLEMS = {
-  easy: [
-    {
-      id: "e1",
-      title: "Two Sum",
-      source: "LeetCode #1",
-      problem: "Given an array of integers nums and an integer target, return indices of the two numbers that add up to target. Each input has exactly one solution.",
-      language: "python",
-      code: `def two_sum(nums, target):
-    """Find two indices whose values sum to target."""
-    seen = {}
-    for i, num in enumerate(nums):
-        complement = target - num
-        if complement in seen:
-            return [seen[complement], i]
-        seen[num] = i
-    return []
+easy: [
+{
+  id:"e1", title:"REST API Health Check", source:"Backend Dev",
+  problem:"Build an Express.js health-check endpoint that returns server uptime, memory usage, and current timestamp.",
+  language:"javascript",
+  code:`const express = require('express');
+const app = express();
 
-# Example
-print(two_sum([2, 7, 11, 15], 9))  # [0, 1]
-print(two_sum([3, 2, 4], 6))       # [1, 2]`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(n)",
+app.get('/health', (req, res) => {
+  const uptime = process.uptime();
+  const mem = process.memoryUsage();
+  res.json({
+    status: 'healthy',
+    uptime: \`\${Math.floor(uptime / 3600)}h \${Math.floor((uptime % 3600) / 60)}m\`,
+    memory: {
+      heapUsed: \`\${(mem.heapUsed / 1024 / 1024).toFixed(1)} MB\`,
+      rss: \`\${(mem.rss / 1024 / 1024).toFixed(1)} MB\`,
     },
-    {
-      id: "e2",
-      title: "Reverse String",
-      source: "LeetCode #344",
-      problem: "Write a function that reverses a string in-place. The input is given as an array of characters.",
-      language: "python",
-      code: `def reverse_string(s):
-    """Reverse array of chars in-place using two pointers."""
-    left, right = 0, len(s) - 1
-    while left < right:
-        s[left], s[right] = s[right], s[left]
-        left += 1
-        right -= 1
-    return s
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+  });
+});
 
-# Example
-print(reverse_string(["h","e","l","l","o"]))
-# ['o', 'l', 'l', 'e', 'h']`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(1)",
-    },
-    {
-      id: "e3",
-      title: "Valid Parentheses",
-      source: "LeetCode #20",
-      problem: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
-      language: "javascript",
-      code: `function isValid(s) {
-  const stack = [];
-  const map = { ')': '(', '}': '{', ']': '[' };
+app.listen(3000, () => console.log('Server on :3000'));`,
+  timeComplexity:"O(1)", spaceComplexity:"O(1)",
+},
+{
+  id:"e2", title:"Environment Config Loader", source:"DevOps",
+  problem:"Create a Python config loader that reads from .env files with defaults, type casting, and required field validation.",
+  language:"python",
+  code:`import os
+from pathlib import Path
+
+class Config:
+    """Load config from .env with defaults and validation."""
+    
+    def __init__(self, env_file='.env'):
+        self._load_env(env_file)
+    
+    def _load_env(self, path):
+        if Path(path).exists():
+            for line in open(path):
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, val = line.split('=', 1)
+                    os.environ.setdefault(key.strip(), val.strip())
+    
+    def get(self, key, default=None, cast=str, required=False):
+        val = os.environ.get(key, default)
+        if required and val is None:
+            raise ValueError(f"Missing required config: {key}")
+        return cast(val) if val is not None else None
+
+# Usage
+config = Config()
+DB_HOST = config.get('DB_HOST', 'localhost')
+DB_PORT = config.get('DB_PORT', '5432', cast=int)
+SECRET = config.get('SECRET_KEY', required=True)
+DEBUG = config.get('DEBUG', 'false', cast=lambda v: v.lower() == 'true')`,
+  timeComplexity:"O(n)", spaceComplexity:"O(n)",
+},
+{
+  id:"e3", title:"CSV Data Pipeline", source:"Data Engineering",
+  problem:"Build a Python script that reads a CSV, cleans null values, normalizes columns, and exports to JSON.",
+  language:"python",
+  code:`import csv
+import json
+from datetime import datetime
+
+def process_csv(input_path, output_path):
+    """Clean CSV data and export as structured JSON."""
+    records = []
+    
+    with open(input_path, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            cleaned = {}
+            for key, val in row.items():
+                key = key.strip().lower().replace(' ', '_')
+                val = val.strip() if val else None
+                # Try numeric conversion
+                if val and val.replace('.','',1).isdigit():
+                    val = float(val) if '.' in val else int(val)
+                cleaned[key] = val
+            
+            # Skip rows with no usable data
+            if any(v is not None for v in cleaned.values()):
+                cleaned['_processed_at'] = datetime.now().isoformat()
+                records.append(cleaned)
+    
+    with open(output_path, 'w') as f:
+        json.dump(records, f, indent=2, default=str)
+    
+    print(f"Processed {len(records)} records -> {output_path}")
+    return records
+
+process_csv('sales_data.csv', 'clean_output.json')`,
+  timeComplexity:"O(n * m)", spaceComplexity:"O(n)",
+},
+{
+  id:"e4", title:"JWT Auth Middleware", source:"Web Security",
+  problem:"Create Express middleware that validates JWT tokens, extracts user info, and handles expired/invalid tokens gracefully.",
+  language:"javascript",
+  code:`const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization;
   
-  for (const char of s) {
-    if ('({['.includes(char)) {
-      stack.push(char);
-    } else {
-      if (stack.pop() !== map[char]) return false;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  const token = header.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, SECRET);
+    req.user = {
+      id: decoded.sub,
+      email: decoded.email,
+      role: decoded.role || 'user',
+    };
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', code: 'EXPIRED' });
     }
+    return res.status(403).json({ error: 'Invalid token' });
   }
-  return stack.length === 0;
 }
 
-// Examples
-console.log(isValid("(){}[]"));   // true
-console.log(isValid("(]"));       // false
-console.log(isValid("{[]}"));     // true`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(n)",
-    },
-    {
-      id: "e4",
-      title: "FizzBuzz",
-      source: "LeetCode #412",
-      problem: "Given an integer n, return a string array where: answer[i] == 'FizzBuzz' if i is divisible by 3 and 5, 'Fizz' if divisible by 3, 'Buzz' if divisible by 5, or i (as string) otherwise.",
-      language: "python",
-      code: `def fizz_buzz(n):
-    """Classic FizzBuzz with clean conditional logic."""
-    result = []
-    for i in range(1, n + 1):
-        if i % 15 == 0:
-            result.append("FizzBuzz")
-        elif i % 3 == 0:
-            result.append("Fizz")
-        elif i % 5 == 0:
-            result.append("Buzz")
-        else:
-            result.append(str(i))
-    return result
+// Usage
+app.get('/api/profile', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});`,
+  timeComplexity:"O(1)", spaceComplexity:"O(1)",
+},
+],
+medium: [
+{
+  id:"m1", title:"Web Scraper with Rate Limiting", source:"Automation",
+  problem:"Build a Python web scraper that fetches product prices from multiple URLs with retry logic, rate limiting, and structured output.",
+  language:"python",
+  code:`import asyncio
+import aiohttp
+from dataclasses import dataclass
+from datetime import datetime
 
-# Example
-print(fizz_buzz(15))
-# ['1','2','Fizz','4','Buzz','Fizz','7','8','Fizz','Buzz',
-#  '11','Fizz','13','14','FizzBuzz']`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(n)",
-    },
-    {
-      id: "e5",
-      title: "Palindrome Number",
-      source: "LeetCode #9",
-      problem: "Given an integer x, return true if x is a palindrome, and false otherwise. Solve without converting to string.",
-      language: "javascript",
-      code: `function isPalindrome(x) {
-  // Negative numbers are never palindromes
-  if (x < 0 || (x % 10 === 0 && x !== 0)) return false;
-  
-  let reversed = 0;
-  while (x > reversed) {
-    reversed = reversed * 10 + x % 10;
-    x = Math.floor(x / 10);
-  }
-  
-  // Handle both even and odd digit counts
-  return x === reversed || x === Math.floor(reversed / 10);
-}
+@dataclass
+class Product:
+    url: str
+    name: str
+    price: float
+    currency: str
+    scraped_at: str
 
-// Examples
-console.log(isPalindrome(121));    // true
-console.log(isPalindrome(-121));   // false
-console.log(isPalindrome(12321));  // true`,
-      timeComplexity: "O(log n)",
-      spaceComplexity: "O(1)",
-    },
-  ],
-
-  medium: [
-    {
-      id: "m1",
-      title: "Longest Substring Without Repeating",
-      source: "LeetCode #3",
-      problem: "Given a string s, find the length of the longest substring without repeating characters using sliding window.",
-      language: "python",
-      code: `def length_of_longest_substring(s):
-    """Sliding window approach for longest unique substring."""
-    char_index = {}
-    max_len = 0
-    start = 0
+class Scraper:
+    def __init__(self, rate_limit=2):
+        self.semaphore = asyncio.Semaphore(rate_limit)
+        self.results = []
     
-    for end, char in enumerate(s):
-        if char in char_index and char_index[char] >= start:
-            start = char_index[char] + 1
-        char_index[char] = end
-        max_len = max(max_len, end - start + 1)
-    
-    return max_len
+    async def fetch(self, session, url, retries=3):
+        for attempt in range(retries):
+            async with self.semaphore:
+                try:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status == 200:
+                            return await resp.text()
+                        if resp.status == 429:
+                            await asyncio.sleep(2 ** attempt)
+                            continue
+                except aiohttp.ClientError:
+                    await asyncio.sleep(1)
+        return None
 
-# Examples
-print(length_of_longest_substring("abcabcbb"))  # 3 ("abc")
-print(length_of_longest_substring("bbbbb"))     # 1 ("b")
-print(length_of_longest_substring("pwwkew"))    # 3 ("wke")`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(min(m,n))",
-    },
-    {
-      id: "m2",
-      title: "Group Anagrams",
-      source: "LeetCode #49",
-      problem: "Given an array of strings, group the anagrams together. An anagram is a word formed by rearranging the letters of another word.",
-      language: "python",
-      code: `from collections import defaultdict
+    async def scrape_all(self, urls):
+        async with aiohttp.ClientSession() as session:
+            tasks = [self.fetch(session, url) for url in urls]
+            pages = await asyncio.gather(*tasks)
+            return [p for p in pages if p]
 
-def group_anagrams(strs):
-    """Group strings by sorted character signature."""
-    groups = defaultdict(list)
-    
-    for word in strs:
-        # Sort chars to create a canonical key
-        key = tuple(sorted(word))
-        groups[key].append(word)
-    
-    return list(groups.values())
+# Usage
+scraper = Scraper(rate_limit=3)
+asyncio.run(scraper.scrape_all(urls))`,
+  timeComplexity:"O(n)", spaceComplexity:"O(n)",
+},
+{
+  id:"m2", title:"Redis Cache Layer", source:"Backend Infrastructure",
+  problem:"Implement a caching decorator that stores function results in Redis with TTL, cache invalidation, and fallback to direct execution.",
+  language:"python",
+  code:`import redis
+import json
+import functools
+import hashlib
 
-# Example
-result = group_anagrams(["eat","tea","tan","ate","nat","bat"])
-print(result)
-# [['eat','tea','ate'], ['tan','nat'], ['bat']]`,
-      timeComplexity: "O(n * k log k)",
-      spaceComplexity: "O(n * k)",
-    },
-    {
-      id: "m3",
-      title: "Binary Tree Level Order Traversal",
-      source: "LeetCode #102",
-      problem: "Given the root of a binary tree, return the level order traversal of its nodes' values (i.e., from left to right, level by level).",
-      language: "python",
-      code: `from collections import deque
+r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
-class TreeNode:
-    def __init__(self, val=0, left=None, right=None):
-        self.val = val
-        self.left = left
-        self.right = right
-
-def level_order(root):
-    """BFS level-order traversal using a queue."""
-    if not root:
-        return []
-    
-    result = []
-    queue = deque([root])
-    
-    while queue:
-        level_size = len(queue)
-        level = []
-        for _ in range(level_size):
-            node = queue.popleft()
-            level.append(node.val)
-            if node.left:
-                queue.append(node.left)
-            if node.right:
-                queue.append(node.right)
-        result.append(level)
-    
-    return result
-
-# Example: [3,9,20,null,null,15,7] → [[3],[9,20],[15,7]]`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(n)",
-    },
-    {
-      id: "m4",
-      title: "3Sum — Find Triplets",
-      source: "LeetCode #15",
-      problem: "Given an integer array nums, return all unique triplets [nums[i], nums[j], nums[k]] such that i != j != k and nums[i] + nums[j] + nums[k] == 0.",
-      language: "javascript",
-      code: `function threeSum(nums) {
-  nums.sort((a, b) => a - b);
-  const result = [];
-  
-  for (let i = 0; i < nums.length - 2; i++) {
-    // Skip duplicates for first element
-    if (i > 0 && nums[i] === nums[i - 1]) continue;
-    
-    let left = i + 1, right = nums.length - 1;
-    while (left < right) {
-      const sum = nums[i] + nums[left] + nums[right];
-      if (sum === 0) {
-        result.push([nums[i], nums[left], nums[right]]);
-        while (left < right && nums[left] === nums[left + 1]) left++;
-        while (left < right && nums[right] === nums[right - 1]) right--;
-        left++;
-        right--;
-      } else if (sum < 0) left++;
-      else right--;
-    }
-  }
-  return result;
-}
-
-// Example
-console.log(threeSum([-1, 0, 1, 2, -1, -4]));
-// [[-1,-1,2], [-1,0,1]]`,
-      timeComplexity: "O(n²)",
-      spaceComplexity: "O(1)",
-    },
-    {
-      id: "m5",
-      title: "LRU Cache",
-      source: "LeetCode #146",
-      problem: "Design a data structure that follows the Least Recently Used (LRU) cache eviction policy. Implement get and put in O(1) time.",
-      language: "python",
-      code: `from collections import OrderedDict
-
-class LRUCache:
-    """O(1) LRU Cache using OrderedDict."""
-    
-    def __init__(self, capacity):
-        self.cache = OrderedDict()
-        self.capacity = capacity
-    
-    def get(self, key):
-        if key not in self.cache:
-            return -1
-        # Move to end (most recently used)
-        self.cache.move_to_end(key)
-        return self.cache[key]
-    
-    def put(self, key, value):
-        if key in self.cache:
-            self.cache.move_to_end(key)
-        self.cache[key] = value
-        if len(self.cache) > self.capacity:
-            # Evict least recently used (first item)
-            self.cache.popitem(last=False)
-
-# Example
-cache = LRUCache(2)
-cache.put(1, 1)    # cache = {1:1}
-cache.put(2, 2)    # cache = {1:1, 2:2}
-print(cache.get(1)) # 1, cache = {2:2, 1:1}
-cache.put(3, 3)    # evicts key 2, cache = {1:1, 3:3}
-print(cache.get(2)) # -1 (evicted)`,
-      timeComplexity: "O(1)",
-      spaceComplexity: "O(capacity)",
-    },
-  ],
-
-  hard: [
-    {
-      id: "h1",
-      title: "Merge K Sorted Lists",
-      source: "LeetCode #23",
-      problem: "You are given an array of k linked lists, each sorted in ascending order. Merge all the linked lists into one sorted linked list and return it.",
-      language: "python",
-      code: `import heapq
-
-class ListNode:
-    def __init__(self, val=0, next=None):
-        self.val = val
-        self.next = next
-
-def merge_k_lists(lists):
-    """Merge k sorted linked lists using a min-heap."""
-    heap = []
-    
-    # Initialize heap with first node from each list
-    for i, node in enumerate(lists):
-        if node:
-            heapq.heappush(heap, (node.val, i, node))
-    
-    dummy = ListNode(0)
-    current = dummy
-    
-    while heap:
-        val, idx, node = heapq.heappop(heap)
-        current.next = node
-        current = current.next
+def cached(ttl=300, prefix='cache'):
+    """Decorator: cache function results in Redis."""
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Build unique cache key from function + args
+            key_data = f"{fn.__name__}:{args}:{sorted(kwargs.items())}"
+            cache_key = f"{prefix}:{hashlib.md5(key_data.encode()).hexdigest()}"
+            
+            # Try cache first
+            cached_val = r.get(cache_key)
+            if cached_val is not None:
+                return json.loads(cached_val)
+            
+            # Execute and cache
+            result = fn(*args, **kwargs)
+            try:
+                r.setex(cache_key, ttl, json.dumps(result, default=str))
+            except (TypeError, redis.RedisError):
+                pass  # Don't fail if caching fails
+            return result
         
-        if node.next:
-            heapq.heappush(heap, (node.next.val, idx, node.next))
-    
-    return dummy.next
+        wrapper.invalidate = lambda *a, **kw: r.delete(
+            f"{prefix}:{hashlib.md5(f'{fn.__name__}:{a}:{sorted(kw.items())}'.encode()).hexdigest()}"
+        )
+        return wrapper
+    return decorator
 
-# Time: O(N log k) where N = total nodes, k = number of lists
-# Space: O(k) for the heap`,
-      timeComplexity: "O(N log k)",
-      spaceComplexity: "O(k)",
-    },
-    {
-      id: "h2",
-      title: "Trapping Rain Water",
-      source: "LeetCode #42",
-      problem: "Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.",
-      language: "javascript",
-      code: `function trap(height) {
-  let left = 0, right = height.length - 1;
-  let leftMax = 0, rightMax = 0;
-  let water = 0;
-  
-  while (left < right) {
-    if (height[left] < height[right]) {
-      if (height[left] >= leftMax) {
-        leftMax = height[left];
-      } else {
-        water += leftMax - height[left];
+@cached(ttl=600)
+def get_user_profile(user_id):
+    # Expensive DB query here
+    return db.query(f"SELECT * FROM users WHERE id = {user_id}")`,
+  timeComplexity:"O(1)", spaceComplexity:"O(1)",
+},
+{
+  id:"m3", title:"WebSocket Chat Server", source:"Real-time Systems",
+  problem:"Build a WebSocket chat server with rooms, user presence, message history, and typing indicators.",
+  language:"javascript",
+  code:`const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+const rooms = new Map();    // roomId -> Set<ws>
+const users = new Map();    // ws -> { name, room }
+
+wss.on('connection', (ws) => {
+  ws.on('message', (raw) => {
+    const msg = JSON.parse(raw);
+    
+    switch (msg.type) {
+      case 'join': {
+        const { room, name } = msg;
+        users.set(ws, { name, room });
+        if (!rooms.has(room)) rooms.set(room, new Set());
+        rooms.get(room).add(ws);
+        broadcast(room, { type: 'system', text: name + ' joined' }, ws);
+        ws.send(JSON.stringify({ type: 'joined', room, users: getRoomUsers(room) }));
+        break;
       }
-      left++;
-    } else {
-      if (height[right] >= rightMax) {
-        rightMax = height[right];
-      } else {
-        water += rightMax - height[right];
+      case 'message': {
+        const user = users.get(ws);
+        if (user) broadcast(user.room, {
+          type: 'message', from: user.name,
+          text: msg.text, time: Date.now()
+        });
+        break;
       }
-      right--;
+      case 'typing': {
+        const u = users.get(ws);
+        if (u) broadcast(u.room, { type: 'typing', from: u.name }, ws);
+        break;
+      }
     }
-  }
-  
-  return water;
+  });
+
+  ws.on('close', () => {
+    const user = users.get(ws);
+    if (user) {
+      rooms.get(user.room)?.delete(ws);
+      broadcast(user.room, { type: 'system', text: user.name + ' left' });
+      users.delete(ws);
+    }
+  });
+});
+
+function broadcast(room, data, exclude) {
+  rooms.get(room)?.forEach(client => {
+    if (client !== exclude && client.readyState === WebSocket.OPEN)
+      client.send(JSON.stringify(data));
+  });
 }
 
-// Example
-console.log(trap([0,1,0,2,1,0,1,3,2,1,2,1])); // 6
-console.log(trap([4,2,0,3,2,5]));              // 9`,
-      timeComplexity: "O(n)",
-      spaceComplexity: "O(1)",
-    },
-    {
-      id: "h3",
-      title: "Word Break II",
-      source: "LeetCode #140",
-      problem: "Given a string s and a dictionary of strings wordDict, add spaces in s to construct sentences where each word is valid. Return all possible sentences.",
-      language: "python",
-      code: `def word_break(s, word_dict):
-    """Backtracking with memoization for word break."""
-    word_set = set(word_dict)
-    memo = {}
-    
-    def backtrack(start):
-        if start in memo:
-            return memo[start]
-        if start == len(s):
-            return [""]
-        
-        sentences = []
-        for end in range(start + 1, len(s) + 1):
-            word = s[start:end]
-            if word in word_set:
-                rest = backtrack(end)
-                for r in rest:
-                    if r:
-                        sentences.append(word + " " + r)
-                    else:
-                        sentences.append(word)
-        
-        memo[start] = sentences
-        return sentences
-    
-    return backtrack(0)
+function getRoomUsers(room) {
+  return [...(rooms.get(room) || [])].map(ws => users.get(ws)?.name);
+}`,
+  timeComplexity:"O(n) broadcast", spaceComplexity:"O(n)",
+},
+{
+  id:"m4", title:"Database Migration System", source:"Backend Dev",
+  problem:"Create a lightweight SQL migration runner that tracks applied migrations, supports rollback, and runs in order.",
+  language:"python",
+  code:`import sqlite3
+import os
+import glob
+from datetime import datetime
 
-# Example
-s = "catsanddog"
-words = ["cat","cats","and","sand","dog"]
-print(word_break(s, words))
-# ["cats and dog", "cat sand dog"]`,
-      timeComplexity: "O(n² * 2^n)",
-      spaceComplexity: "O(n * 2^n)",
-    },
-    {
-      id: "h4",
-      title: "Median of Two Sorted Arrays",
-      source: "LeetCode #4",
-      problem: "Given two sorted arrays nums1 and nums2, return the median of the two sorted arrays. The overall run time complexity should be O(log(m+n)).",
-      language: "python",
-      code: `def find_median(nums1, nums2):
-    """Binary search on the shorter array."""
-    if len(nums1) > len(nums2):
-        nums1, nums2 = nums2, nums1
+class Migrator:
+    def __init__(self, db_path, migrations_dir='./migrations'):
+        self.conn = sqlite3.connect(db_path)
+        self.dir = migrations_dir
+        self._init_table()
     
-    m, n = len(nums1), len(nums2)
-    lo, hi = 0, m
+    def _init_table(self):
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS _migrations (
+                id INTEGER PRIMARY KEY,
+                name TEXT UNIQUE,
+                applied_at TEXT
+            )
+        """)
+        self.conn.commit()
     
-    while lo <= hi:
-        i = (lo + hi) // 2
-        j = (m + n + 1) // 2 - i
+    def _applied(self):
+        rows = self.conn.execute("SELECT name FROM _migrations ORDER BY id").fetchall()
+        return {r[0] for r in rows}
+    
+    def migrate(self):
+        applied = self._applied()
+        files = sorted(glob.glob(os.path.join(self.dir, '*.up.sql')))
         
-        left1  = nums1[i-1] if i > 0 else float('-inf')
-        right1 = nums1[i]   if i < m else float('inf')
-        left2  = nums2[j-1] if j > 0 else float('-inf')
-        right2 = nums2[j]   if j < n else float('inf')
-        
-        if left1 <= right2 and left2 <= right1:
-            if (m + n) % 2 == 0:
-                return (max(left1, left2) + min(right1, right2)) / 2
-            return max(left1, left2)
-        elif left1 > right2:
-            hi = i - 1
-        else:
-            lo = i + 1
+        for f in files:
+            name = os.path.basename(f)
+            if name not in applied:
+                sql = open(f).read()
+                print(f"Applying: {name}")
+                self.conn.executescript(sql)
+                self.conn.execute(
+                    "INSERT INTO _migrations (name, applied_at) VALUES (?, ?)",
+                    (name, datetime.now().isoformat())
+                )
+                self.conn.commit()
+        print("All migrations applied.")
+    
+    def rollback(self, steps=1):
+        applied = list(self._applied())[-steps:]
+        for name in reversed(applied):
+            down = name.replace('.up.sql', '.down.sql')
+            path = os.path.join(self.dir, down)
+            if os.path.exists(path):
+                print(f"Rolling back: {name}")
+                self.conn.executescript(open(path).read())
+                self.conn.execute("DELETE FROM _migrations WHERE name = ?", (name,))
+                self.conn.commit()
 
-# Example
-print(find_median([1, 3], [2]))       # 2.0
-print(find_median([1, 2], [3, 4]))    # 2.5`,
-      timeComplexity: "O(log(min(m,n)))",
-      spaceComplexity: "O(1)",
-    },
-  ],
+Migrator('app.db').migrate()`,
+  timeComplexity:"O(n)", spaceComplexity:"O(1)",
+},
+],
+hard: [
+{
+  id:"h1", title:"Solana Token Launchpad", source:"Web3 / Anchor",
+  problem:"Write an Anchor smart contract for a token launchpad: users deposit SOL, receive tokens at a bonding curve price, with a treasury vault.",
+  language:"rust",
+  code:`use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, MintTo};
 
-  expert: [
-    {
-      id: "x1",
-      title: "Solana Token Swap (On-Chain)",
-      source: "Web3 / Anchor",
-      problem: "Write an Anchor smart contract that implements a basic token swap pool with constant-product AMM (x * y = k) on Solana.",
-      language: "rust",
-      code: `use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-
-declare_id!("SwapXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+declare_id!("LaunchXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
 #[program]
-pub mod nomad_swap {
+pub mod token_launch {
     use super::*;
 
-    pub fn initialize_pool(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
-        let pool = &mut ctx.accounts.pool;
-        pool.token_a_vault = ctx.accounts.vault_a.key();
-        pool.token_b_vault = ctx.accounts.vault_b.key();
-        pool.fee_bps = fee_bps;
-        pool.bump = ctx.bumps.pool;
+    pub fn initialize(ctx: Context<Init>, price_lamports: u64) -> Result<()> {
+        let launch = &mut ctx.accounts.launch;
+        launch.authority = ctx.accounts.authority.key();
+        launch.mint = ctx.accounts.mint.key();
+        launch.price = price_lamports;
+        launch.total_sold = 0;
+        launch.bump = ctx.bumps.launch;
         Ok(())
     }
 
-    pub fn swap(ctx: Context<Swap>, amount_in: u64) -> Result<()> {
+    pub fn buy_tokens(ctx: Context<Buy>, sol_amount: u64) -> Result<()> {
+        let launch = &mut ctx.accounts.launch;
+        
+        // Bonding curve: price increases 1% per 1000 tokens sold
+        let multiplier = 100 + (launch.total_sold / 1000);
+        let effective_price = launch.price * multiplier / 100;
+        let token_amount = (sol_amount * 1_000_000) / effective_price;
+        
+        // Transfer SOL to treasury
+        anchor_lang::system_program::transfer(
+            CpiContext::new(ctx.accounts.system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: ctx.accounts.buyer.to_account_info(),
+                    to: ctx.accounts.treasury.to_account_info(),
+                }),
+            sol_amount,
+        )?;
+        
+        // Mint tokens to buyer
+        let seeds = &[b"launch", launch.authority.as_ref(), &[launch.bump]];
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    to: ctx.accounts.buyer_ata.to_account_info(),
+                    authority: launch.to_account_info(),
+                }, &[seeds]),
+            token_amount,
+        )?;
+        
+        launch.total_sold += token_amount;
+        Ok(())
+    }
+}`,
+  timeComplexity:"O(1) per buy", spaceComplexity:"O(1)",
+},
+{
+  id:"h2", title:"Distributed Task Queue", source:"System Architecture",
+  problem:"Build a production task queue with priority scheduling, dead-letter handling, retries with exponential backoff, and worker health checks.",
+  language:"python",
+  code:`import asyncio
+import time
+import uuid
+import heapq
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Callable, Any
+
+class Status(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+    DEAD = "dead_letter"
+
+@dataclass(order=True)
+class Job:
+    priority: int
+    id: str = field(default_factory=lambda: uuid.uuid4().hex[:8], compare=False)
+    fn: Callable = field(compare=False, repr=False)
+    args: tuple = field(default=(), compare=False)
+    retries: int = field(default=3, compare=False)
+    attempts: int = field(default=0, compare=False)
+    status: Status = field(default=Status.PENDING, compare=False)
+    result: Any = field(default=None, compare=False)
+
+class TaskQueue:
+    def __init__(self, workers=4):
+        self.heap = []
+        self.dead_letter = []
+        self.sem = asyncio.Semaphore(workers)
+        self.completed = 0
+    
+    def enqueue(self, fn, args=(), priority=5, retries=3):
+        job = Job(priority=priority, fn=fn, args=args, retries=retries)
+        heapq.heappush(self.heap, job)
+        return job.id
+    
+    async def _execute(self, job):
+        async with self.sem:
+            job.status = Status.RUNNING
+            job.attempts += 1
+            try:
+                if asyncio.iscoroutinefunction(job.fn):
+                    job.result = await job.fn(*job.args)
+                else:
+                    job.result = job.fn(*job.args)
+                job.status = Status.DONE
+                self.completed += 1
+            except Exception as e:
+                if job.attempts >= job.retries:
+                    job.status = Status.DEAD
+                    job.result = str(e)
+                    self.dead_letter.append(job)
+                else:
+                    backoff = 2 ** job.attempts
+                    await asyncio.sleep(backoff)
+                    heapq.heappush(self.heap, job)
+    
+    async def process(self):
+        tasks = []
+        while self.heap:
+            job = heapq.heappop(self.heap)
+            tasks.append(self._execute(job))
+        await asyncio.gather(*tasks)
+        return self.completed`,
+  timeComplexity:"O(n log n)", spaceComplexity:"O(n)",
+},
+{
+  id:"h3", title:"OAuth2 Authorization Server", source:"Security",
+  problem:"Implement an OAuth2 authorization code flow with PKCE, refresh tokens, scope validation, and token revocation.",
+  language:"javascript",
+  code:`const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+
+const SECRET = process.env.AUTH_SECRET;
+const codes = new Map();     // auth code -> { clientId, userId, scope, codeChallenge }
+const refreshTokens = new Set();
+
+function authorize(req, res) {
+  const { client_id, redirect_uri, scope, state,
+          code_challenge, code_challenge_method } = req.query;
+  
+  // After user login consent...
+  const code = crypto.randomBytes(32).toString('hex');
+  codes.set(code, {
+    clientId: client_id, userId: req.user.id,
+    scope, codeChallenge: code_challenge,
+    method: code_challenge_method, expiresAt: Date.now() + 600000,
+  });
+  
+  res.redirect(redirect_uri + '?code=' + code + '&state=' + state);
+}
+
+function token(req, res) {
+  const { code, code_verifier, grant_type, refresh_token } = req.body;
+  
+  if (grant_type === 'authorization_code') {
+    const entry = codes.get(code);
+    if (!entry || entry.expiresAt < Date.now())
+      return res.status(400).json({ error: 'invalid_grant' });
+    
+    // Verify PKCE
+    const hash = crypto.createHash('sha256').update(code_verifier).digest('base64url');
+    if (hash !== entry.codeChallenge)
+      return res.status(400).json({ error: 'invalid_pkce' });
+    
+    codes.delete(code);
+    return issueTokens(res, entry.userId, entry.scope);
+  }
+  
+  if (grant_type === 'refresh_token') {
+    if (!refreshTokens.has(refresh_token))
+      return res.status(400).json({ error: 'invalid_refresh' });
+    const decoded = jwt.verify(refresh_token, SECRET);
+    refreshTokens.delete(refresh_token);
+    return issueTokens(res, decoded.sub, decoded.scope);
+  }
+}
+
+function issueTokens(res, userId, scope) {
+  const access = jwt.sign({ sub: userId, scope }, SECRET, { expiresIn: '15m' });
+  const refresh = jwt.sign({ sub: userId, scope }, SECRET, { expiresIn: '7d' });
+  refreshTokens.add(refresh);
+  res.json({ access_token: access, refresh_token: refresh, token_type: 'Bearer' });
+}`,
+  timeComplexity:"O(1)", spaceComplexity:"O(n)",
+},
+],
+expert: [
+{
+  id:"x1", title:"Solana AMM with Fees", source:"DeFi / Anchor",
+  problem:"Implement a constant-product automated market maker on Solana with LP tokens, swap fees, and slippage protection.",
+  language:"rust",
+  code:`use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer, MintTo, Burn};
+
+declare_id!("AMMxXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+
+#[program]
+pub mod nomad_amm {
+    use super::*;
+
+    pub fn add_liquidity(ctx: Context<AddLiq>, amount_a: u64, amount_b: u64) -> Result<()> {
+        let pool = &ctx.accounts.pool;
         let reserve_a = ctx.accounts.vault_a.amount;
         let reserve_b = ctx.accounts.vault_b.amount;
         
-        // Constant product: (x + dx) * (y - dy) = x * y
-        let fee = amount_in * (ctx.accounts.pool.fee_bps as u64) / 10000;
-        let net_in = amount_in - fee;
-        let amount_out = (reserve_b * net_in) / (reserve_a + net_in);
+        // Calculate LP tokens to mint
+        let lp_supply = ctx.accounts.lp_mint.supply;
+        let lp_amount = if lp_supply == 0 {
+            (amount_a as f64 * amount_b as f64).sqrt() as u64
+        } else {
+            std::cmp::min(
+                amount_a * lp_supply / reserve_a,
+                amount_b * lp_supply / reserve_b,
+            )
+        };
         
-        require!(amount_out > 0, SwapError::ZeroOutput);
+        // Deposit both tokens
+        token::transfer(ctx.accounts.deposit_a_ctx(), amount_a)?;
+        token::transfer(ctx.accounts.deposit_b_ctx(), amount_b)?;
         
-        // Transfer in
-        token::transfer(ctx.accounts.deposit_ctx(), amount_in)?;
-        // Transfer out
-        token::transfer(ctx.accounts.withdraw_ctx(), amount_out)?;
+        // Mint LP tokens
+        let seeds = &[b"pool", pool.seed.as_ref(), &[pool.bump]];
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    mint: ctx.accounts.lp_mint.to_account_info(),
+                    to: ctx.accounts.user_lp.to_account_info(),
+                    authority: pool.to_account_info(),
+                }, &[seeds]),
+            lp_amount)?;
+        Ok(())
+    }
+
+    pub fn swap(ctx: Context<Swap>, amount_in: u64, min_out: u64) -> Result<()> {
+        let reserve_in = ctx.accounts.vault_in.amount;
+        let reserve_out = ctx.accounts.vault_out.amount;
         
-        emit!(SwapEvent { amount_in, amount_out, fee });
+        let fee = amount_in * 30 / 10000;  // 0.3% fee
+        let net = amount_in - fee;
+        let out = (reserve_out as u128 * net as u128 / (reserve_in as u128 + net as u128)) as u64;
+        
+        require!(out >= min_out, AmmError::SlippageExceeded);
+        
+        token::transfer(ctx.accounts.user_deposit_ctx(), amount_in)?;
+        let seeds = &[b"pool", ctx.accounts.pool.seed.as_ref(), &[ctx.accounts.pool.bump]];
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.vault_out.to_account_info(),
+                    to: ctx.accounts.user_receive.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                }, &[seeds]),
+            out)?;
         Ok(())
     }
 }
 
 #[error_code]
-pub enum SwapError {
-    #[msg("Output amount is zero")]
-    ZeroOutput,
-}
-
-#[event]
-pub struct SwapEvent {
-    pub amount_in: u64,
-    pub amount_out: u64,
-    pub fee: u64,
+pub enum AmmError {
+    #[msg("Output below minimum — slippage exceeded")]
+    SlippageExceeded,
 }`,
-      timeComplexity: "O(1) per swap",
-      spaceComplexity: "O(1)",
-    },
-    {
-      id: "x2",
-      title: "Merkle Airdrop Distributor",
-      source: "Web3 / Solidity",
-      problem: "Implement a gas-efficient Merkle tree-based airdrop contract where users prove their claim eligibility using Merkle proofs instead of storing all recipients on-chain.",
-      language: "solidity",
-      code: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-
-contract MerkleAirdrop {
-    IERC20 public immutable token;
-    bytes32 public immutable merkleRoot;
-    mapping(address => bool) public claimed;
-
-    event Claimed(address indexed account, uint256 amount);
-
-    constructor(address _token, bytes32 _root) {
-        token = IERC20(_token);
-        merkleRoot = _root;
-    }
-
-    function claim(uint256 amount, bytes32[] calldata proof) external {
-        require(!claimed[msg.sender], "Already claimed");
-        
-        // Verify Merkle proof
-        bytes32 leaf = keccak256(
-            bytes.concat(keccak256(abi.encode(msg.sender, amount)))
-        );
-        require(
-            MerkleProof.verify(proof, merkleRoot, leaf),
-            "Invalid proof"
-        );
-        
-        claimed[msg.sender] = true;
-        token.transfer(msg.sender, amount);
-        emit Claimed(msg.sender, amount);
-    }
-    
-    // Recover unclaimed tokens after deadline
-    function sweep(address to) external {
-        uint256 balance = token.balanceOf(address(this));
-        token.transfer(to, balance);
-    }
-}`,
-      timeComplexity: "O(log n) per claim",
-      spaceComplexity: "O(1) per claim",
-    },
-    {
-      id: "x3",
-      title: "Async Rate Limiter",
-      source: "System Design",
-      problem: "Implement a sliding window rate limiter for an API that supports concurrent requests. Should allow N requests per window and queue excess requests.",
-      language: "javascript",
-      code: `class SlidingWindowRateLimiter {
-  constructor(maxRequests, windowMs) {
-    this.maxRequests = maxRequests;
-    this.windowMs = windowMs;
-    this.timestamps = [];
-    this.queue = [];
-  }
-
-  async execute(fn) {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ fn, resolve, reject });
-      this._processQueue();
-    });
-  }
-
-  _processQueue() {
-    const now = Date.now();
-    // Remove expired timestamps
-    this.timestamps = this.timestamps.filter(
-      t => now - t < this.windowMs
-    );
-
-    while (
-      this.queue.length > 0 &&
-      this.timestamps.length < this.maxRequests
-    ) {
-      const { fn, resolve, reject } = this.queue.shift();
-      this.timestamps.push(now);
-      
-      Promise.resolve()
-        .then(() => fn())
-        .then(resolve)
-        .catch(reject);
-    }
-
-    // Schedule retry for remaining queue items
-    if (this.queue.length > 0) {
-      const oldest = this.timestamps[0];
-      const retryIn = this.windowMs - (now - oldest) + 10;
-      setTimeout(() => this._processQueue(), retryIn);
-    }
-  }
-}
-
-// Usage: 5 requests per second
-const limiter = new SlidingWindowRateLimiter(5, 1000);
-const fetchData = (id) => limiter.execute(
-  () => fetch(\`/api/data/\${id}\`).then(r => r.json())
-);`,
-      timeComplexity: "O(n) per call",
-      spaceComplexity: "O(n + q)",
-    },
-    {
-      id: "x4",
-      title: "Concurrent Task Scheduler",
-      source: "System Design",
-      problem: "Build a task scheduler that runs async tasks with a configurable concurrency limit, priority queue, retry logic, and cancellation support.",
-      language: "python",
-      code: `import asyncio
-import heapq
+  timeComplexity:"O(1) per op", spaceComplexity:"O(1)",
+},
+{
+  id:"x2", title:"Real-time Event Pipeline", source:"Data Infrastructure",
+  problem:"Build a production event ingestion pipeline with batching, backpressure, dead-letter queue, and exactly-once delivery guarantees.",
+  language:"python",
+  code:`import asyncio
+import json
+import time
+import logging
+from collections import deque
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Coroutine
 
-class TaskStatus(Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    DONE = "done"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+logger = logging.getLogger("pipeline")
 
-@dataclass(order=True)
-class Task:
-    priority: int
-    id: str = field(compare=False)
-    fn: Callable = field(compare=False, repr=False)
-    retries: int = field(default=3, compare=False)
-    status: TaskStatus = field(default=TaskStatus.PENDING, compare=False)
-    result: Any = field(default=None, compare=False)
+@dataclass
+class Event:
+    id: str
+    topic: str
+    payload: dict
+    timestamp: float = field(default_factory=time.time)
+    attempts: int = 0
 
-class TaskScheduler:
-    def __init__(self, concurrency=4):
-        self.concurrency = concurrency
-        self.queue = []
-        self.running = set()
-        self.semaphore = asyncio.Semaphore(concurrency)
+class EventPipeline:
+    def __init__(self, batch_size=100, flush_interval=5, max_retries=3, max_queue=10000):
+        self.buffer = []
+        self.batch_size = batch_size
+        self.flush_interval = flush_interval
+        self.max_retries = max_retries
+        self.dead_letter = deque(maxlen=1000)
+        self.processed_ids = set()  # exactly-once dedup
+        self.max_queue = max_queue
+        self._queue = asyncio.Queue(maxsize=max_queue)
+        self.stats = {"ingested": 0, "processed": 0, "failed": 0}
     
-    def submit(self, task_id, fn, priority=0, retries=3):
-        task = Task(priority=priority, id=task_id, fn=fn, retries=retries)
-        heapq.heappush(self.queue, task)
-        return task
+    async def ingest(self, event: Event):
+        if self._queue.qsize() >= self.max_queue:
+            logger.warning("Backpressure: queue full, dropping event")
+            return False
+        await self._queue.put(event)
+        self.stats["ingested"] += 1
+        return True
     
-    async def _run_task(self, task):
-        async with self.semaphore:
-            task.status = TaskStatus.RUNNING
-            self.running.add(task.id)
-            for attempt in range(task.retries):
+    async def _flush(self, batch):
+        """Send batch to sink (DB, Kafka, S3, etc.)."""
+        deduped = [e for e in batch if e.id not in self.processed_ids]
+        try:
+            # Simulated sink write
+            await asyncio.sleep(0.1)
+            for e in deduped:
+                self.processed_ids.add(e.id)
+            self.stats["processed"] += len(deduped)
+            logger.info(f"Flushed {len(deduped)} events")
+        except Exception as ex:
+            for e in deduped:
+                e.attempts += 1
+                if e.attempts >= self.max_retries:
+                    self.dead_letter.append(e)
+                    self.stats["failed"] += 1
+                else:
+                    await self._queue.put(e)
+    
+    async def run(self):
+        while True:
+            batch = []
+            deadline = time.time() + self.flush_interval
+            while len(batch) < self.batch_size and time.time() < deadline:
                 try:
-                    task.result = await task.fn()
-                    task.status = TaskStatus.DONE
+                    remaining = max(0.01, deadline - time.time())
+                    event = await asyncio.wait_for(self._queue.get(), timeout=remaining)
+                    batch.append(event)
+                except asyncio.TimeoutError:
                     break
-                except Exception as e:
-                    if attempt == task.retries - 1:
-                        task.status = TaskStatus.FAILED
-                        task.result = str(e)
-            self.running.discard(task.id)
-    
-    async def run_all(self):
-        tasks = []
-        while self.queue:
-            task = heapq.heappop(self.queue)
-            if task.status != TaskStatus.CANCELLED:
-                tasks.append(self._run_task(task))
-        await asyncio.gather(*tasks)
-
-# Usage
-scheduler = TaskScheduler(concurrency=3)
-scheduler.submit("fetch_price", fetch_sol_price, priority=1)
-scheduler.submit("send_tx", broadcast_transaction, priority=0)`,
-      timeComplexity: "O(n log n)",
-      spaceComplexity: "O(n)",
-    },
-  ],
+            if batch:
+                await self._flush(batch)`,
+  timeComplexity:"O(n) per batch", spaceComplexity:"O(batch + queue)",
+},
+],
 }
 
-/**
- * Get the ordered list of all problems (easy → expert).
- * Used by the component to show problems progressively.
- */
 export function getAllProblemsOrdered() {
-  return [
-    ...PROBLEMS.easy,
-    ...PROBLEMS.medium,
-    ...PROBLEMS.hard,
-    ...PROBLEMS.expert,
-  ]
+  return [...PROBLEMS.easy, ...PROBLEMS.medium, ...PROBLEMS.hard, ...PROBLEMS.expert]
 }
 
-/**
- * Get difficulty info for a given problem index.
- */
 export function getDifficultyForIndex(index) {
-  const easyCount = PROBLEMS.easy.length
-  const mediumCount = PROBLEMS.medium.length
-  const hardCount = PROBLEMS.hard.length
-
-  if (index < easyCount) return DIFFICULTY_LEVELS[0]
-  if (index < easyCount + mediumCount) return DIFFICULTY_LEVELS[1]
-  if (index < easyCount + mediumCount + hardCount) return DIFFICULTY_LEVELS[2]
+  const e = PROBLEMS.easy.length, m = PROBLEMS.medium.length, h = PROBLEMS.hard.length
+  if (index < e) return DIFFICULTY_LEVELS[0]
+  if (index < e + m) return DIFFICULTY_LEVELS[1]
+  if (index < e + m + h) return DIFFICULTY_LEVELS[2]
   return DIFFICULTY_LEVELS[3]
 }
