@@ -262,49 +262,40 @@ export function AgentEconomy() {
     setFunding(false)
   }
 
-  // Distribute profits: send 60% share to user's Phantom wallet via real on-chain TX
+  // Distribute profits: agent wallet sends 60% to user's Phantom wallet
+  const [totalDistributed, setTotalDistributed] = React.useState(0)
   const handleDistribute = async () => {
-    if (!wallet.connected || !wallet.publicKey || !wallet.connection) return
-    const userShare = state.netProfit * 0.6
-    if (userShare <= 0) return
+    if (!wallet.connected || !wallet.address) return
+    const availableProfit = state.netProfit - totalDistributed
+    if (availableProfit <= 0) return
 
     setDistributing(true)
     setDistResult(null)
     try {
-      const { Transaction: SolTx, SystemProgram: SysProg, LAMPORTS_PER_SOL: LSOL } = await import("@solana/web3.js")
-      const provider = window?.solana
-      if (!provider) throw new Error("Phantom not found")
-
-      // Send a real profit-claim TX (self-transfer to create on-chain record)
-      const claimAmount = Math.max(Math.floor(0.001 * LSOL), 1000) // min 0.001 SOL as claim receipt
-      const tx = new SolTx().add(
-        SysProg.transfer({
-          fromPubkey: wallet.publicKey,
-          toPubkey: wallet.publicKey, // self-transfer = profit claim receipt
-          lamports: claimAmount,
-        })
-      )
-      const { blockhash, lastValidBlockHeight } = await wallet.connection.getLatestBlockhash()
-      tx.recentBlockhash = blockhash
-      tx.lastValidBlockHeight = lastValidBlockHeight
-      tx.feePayer = wallet.publicKey
-
-      const { signature } = await provider.signAndSendTransaction(tx)
-      await wallet.connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })
-
-      setDistResult({
-        signature,
-        user_share: userShare,
-        upgrade_share: state.netProfit * 0.25,
-        services_share: state.netProfit * 0.15,
-        total_profit: state.netProfit,
-        network: wallet.network || "devnet",
+      const res = await fetch(`http://localhost:8000/api/distribute?user_wallet=${wallet.address}`, {
+        method: "POST",
+        signal: AbortSignal.timeout(20000),
       })
+      const data = await res.json()
+      if (data.status === "success" && data.signature) {
+        setDistResult(data)
+        setTotalDistributed(prev => prev + (data.user_share || 0))
+      } else {
+        // If agent wallet is empty, show helpful message
+        const errorMsg = data.error || "Distribution failed"
+        if (errorMsg.includes("Insufficient") || errorMsg.includes("No profit")) {
+          setDistResult({ error: "Agent wallet needs SOL first! Use 'Fund Agent Wallet' below to add SOL, then distribute." })
+        } else {
+          setDistResult({ error: errorMsg })
+        }
+      }
     } catch (err) {
-      setDistResult({ error: err.message || "Distribution failed" })
+      setDistResult({ error: "Backend not running. Start it with: python -m agent.api" })
     }
     setDistributing(false)
   }
+
+  const remainingShare = Math.max(0, (state.netProfit - totalDistributed) * 0.6)
   
   // Determine health status
   const healthScore = Math.min(100, Math.max(0,
@@ -597,10 +588,10 @@ export function AgentEconomy() {
 
                 {/* Amount preview + button */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
-                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-center">
+                  <div className={`p-3 rounded-lg border text-center ${remainingShare > 0 ? "bg-emerald-500/5 border-emerald-500/10" : "bg-white/[0.02] border-white/5"}`}>
                     <div className="text-[10px] text-emerald-400/60 font-mono uppercase">Your Share (60%)</div>
-                    <div className="text-lg font-mono font-bold text-emerald-400">{(state.netProfit * 0.6).toFixed(4)}</div>
-                    <div className="text-[9px] text-white/20">SOL → Your wallet</div>
+                    <div className={`text-lg font-mono font-bold ${remainingShare > 0 ? "text-emerald-400" : "text-white/20"}`}>{remainingShare.toFixed(4)}</div>
+                    <div className="text-[9px] text-white/20">{remainingShare > 0 ? "SOL → Your wallet" : "✓ Claimed"}</div>
                   </div>
                   <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/10 text-center">
                     <div className="text-[10px] text-[#7c3aed]/60 font-mono uppercase">Self-Upgrade (25%)</div>
@@ -615,10 +606,10 @@ export function AgentEconomy() {
                   <div className="flex items-center">
                     <button
                       onClick={handleDistribute}
-                      disabled={distributing || !wallet.connected || state.netProfit <= 0}
-                      className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${distributing || !wallet.connected || state.netProfit <= 0 ? "bg-white/5 text-white/20 cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]"}`}
+                      disabled={distributing || !wallet.connected || remainingShare <= 0}
+                      className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${distributing || !wallet.connected || remainingShare <= 0 ? "bg-white/5 text-white/20 cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]"}`}
                     >
-                      {distributing ? "Distributing..." : !wallet.connected ? "Connect Wallet" : state.netProfit <= 0 ? "No Profit Yet" : "Distribute Profits"}
+                      {distributing ? "Distributing..." : !wallet.connected ? "Connect Wallet" : remainingShare <= 0 ? "✓ Already Claimed" : "Distribute Profits"}
                     </button>
                   </div>
                 </div>
