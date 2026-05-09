@@ -3,7 +3,13 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useSimulatedServices } from "@/hooks/useSimulatedData"
 import { GlowingEffect } from "@/components/ui/glowing-effect"
 import { getAllProblemsOrdered, getDifficultyForIndex } from "@/data/codingProblems"
-import { Brain, BarChart3, Shield, Code2, Zap, Clock, Users, Lock, Copy, Check, Terminal, TrendingUp, ExternalLink } from "lucide-react"
+import { useWallet } from "@/contexts/WalletContext"
+import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
+import { Brain, BarChart3, Shield, Code2, Zap, Clock, Users, Lock, Copy, Check, Terminal, TrendingUp, ExternalLink, Wallet } from "lucide-react"
+
+// Nomad treasury address — receives service fees
+const NOMAD_TREASURY = new PublicKey("Cm9ugYjV24DuiizVUNvAtKoQfq2fZRNqMtLWTezFoDSP")
+const SERVICE_FEE_SOL = 0.001 // 0.001 SOL per code generation
 
 const iconMap = { brain: Brain, code: Code2, chart: BarChart3, shield: Shield }
 
@@ -62,22 +68,66 @@ const tokenColors = {
 
 export function ServiceInteraction() {
   const services = useSimulatedServices()
+  const wallet = useWallet()
   const [processing, setProcessing] = React.useState(false)
   const [result, setResult] = React.useState(null)
   const [copied, setCopied] = React.useState(false)
   const [problemIndex, setProblemIndex] = React.useState(0)
   const [solveCount, setSolveCount] = React.useState(0)
+  const [txError, setTxError] = React.useState(null)
 
   const allProblems = React.useMemo(() => getAllProblemsOrdered(), [])
   const totalProblems = allProblems.length
 
   const handleCodeRequest = async () => {
     setResult(null)
+    setTxError(null)
     setProcessing(true)
 
-    // Simulate "AI thinking" delay (1.5 - 3s)
-    const thinkTime = 1500 + Math.random() * 1500
-    await new Promise(r => setTimeout(r, thinkTime))
+    let txSignature = null
+
+    // Send real SOL transaction if wallet is connected
+    if (wallet.connected && wallet.publicKey && wallet.connection) {
+      try {
+        const provider = window?.solana
+        if (!provider) throw new Error("Phantom not found")
+
+        // Create a transfer transaction
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: NOMAD_TREASURY,
+            lamports: Math.floor(SERVICE_FEE_SOL * LAMPORTS_PER_SOL),
+          })
+        )
+
+        // Get recent blockhash
+        const { blockhash, lastValidBlockHeight } = await wallet.connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.lastValidBlockHeight = lastValidBlockHeight
+        transaction.feePayer = wallet.publicKey
+
+        // Sign and send via Phantom
+        const signed = await provider.signTransaction(transaction)
+        txSignature = await wallet.connection.sendRawTransaction(signed.serialize())
+        console.log("[Service] TX sent:", txSignature)
+
+        // Wait for confirmation
+        await wallet.connection.confirmTransaction({
+          signature: txSignature,
+          blockhash,
+          lastValidBlockHeight,
+        })
+        console.log("[Service] TX confirmed:", txSignature)
+      } catch (err) {
+        console.error("[Service] TX failed:", err)
+        setTxError(err.message || "Transaction failed")
+        // Continue anyway — show the code solution even if TX fails
+      }
+    }
+
+    // Short delay for "AI thinking"
+    await new Promise(r => setTimeout(r, 800))
 
     const problem = allProblems[problemIndex % totalProblems]
     const difficulty = getDifficultyForIndex(problemIndex % totalProblems)
@@ -86,7 +136,8 @@ export function ServiceInteraction() {
       success: true,
       problem,
       difficulty,
-      txHash: `${Math.random().toString(36).substr(2, 8)}...${Math.random().toString(36).substr(2, 4)}`,
+      txHash: txSignature || `demo_${Math.random().toString(36).substr(2, 8)}`,
+      isRealTx: !!txSignature,
     })
 
     // Advance to the next problem for next click
@@ -294,7 +345,16 @@ export function ServiceInteraction() {
                               <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02] border-t border-white/5">
                                 <div className="flex items-center gap-4 text-[10px] font-mono text-white/30">
                                   <span className="text-emerald-400">✓ Solved</span>
-                                  <span>TX: {result.txHash}</span>
+                                  {result.isRealTx ? (
+                                    <a href={`https://explorer.solana.com/tx/${result.txHash}?cluster=${wallet.network}`}
+                                      target="_blank" rel="noopener noreferrer"
+                                      className="text-[#7c3aed] hover:text-[#9b5de5] flex items-center gap-1 transition-colors">
+                                      TX: {result.txHash.slice(0, 12)}...{result.txHash.slice(-6)}
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  ) : (
+                                    <span>TX: {result.txHash}</span>
+                                  )}
                                 </div>
                                 <span className="text-[10px] font-mono text-white/20">
                                   Problem {(problemIndex - 1) % totalProblems + 1} of {totalProblems}
@@ -308,20 +368,37 @@ export function ServiceInteraction() {
 
                     {/* ── Buttons ── */}
                     {isCode ? (
-                      <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={handleCodeRequest}
-                        disabled={processing}
-                        className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                          processing
-                            ? "bg-white/5 text-white/30 cursor-not-allowed"
-                            : "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)]"
-                        }`}
-                      >
-                        <Code2 className="w-4 h-4" />
-                        {processing ? "Solving Challenge..." : `Solve Next Challenge — ${services.find(s => s.name === "Code Generation")?.price || "0.10 SOL"}`}
-                      </motion.button>
+                      <>
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          onClick={handleCodeRequest}
+                          disabled={processing}
+                          className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                            processing
+                              ? "bg-white/5 text-white/30 cursor-not-allowed"
+                              : "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)]"
+                          }`}
+                        >
+                          <Code2 className="w-4 h-4" />
+                          {processing
+                            ? (wallet.connected ? "Sending TX & Solving..." : "Solving Challenge...")
+                            : wallet.connected
+                              ? `Solve Next Challenge — ${SERVICE_FEE_SOL} SOL`
+                              : `Solve Next Challenge — 0.10 SOL`
+                          }
+                        </motion.button>
+                        {txError && (
+                          <div className="mt-2 text-xs text-rose-400/70 text-center font-mono">
+                            ⚠ TX: {txError}
+                          </div>
+                        )}
+                        {!wallet.connected && (
+                          <div className="mt-2 text-xs text-white/20 text-center">
+                            Connect wallet to pay with real SOL
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <button disabled className="w-full py-3 rounded-xl text-sm font-semibold bg-white/[0.03] text-white/20 border border-white/5 cursor-not-allowed flex items-center justify-center gap-2">
                         <Lock className="w-3.5 h-3.5" /> Coming Soon
