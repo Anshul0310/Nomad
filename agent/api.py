@@ -276,6 +276,53 @@ def trigger_service(service_name: str):
         return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
 
 
+@app.post("/api/pay")
+def pay_for_service():
+    """
+    Send real SOL from the agent's server-side wallet.
+    No browser popup needed — the agent wallet pays automatically.
+    Returns the real on-chain transaction signature.
+    """
+    SERVICE_FEE = 0.001  # SOL per service call
+    TREASURY = "Cm9ugYjV24DuiizVUNvAtKoQfq2fZRNqMtLWTezFoDSP"
+
+    try:
+        from agent.wallet.solana_wallet import SolanaWallet
+        wallet = SolanaWallet()
+
+        balance = wallet.get_balance(force=True)
+        if balance < SERVICE_FEE + 0.001:  # need fee + rent
+            return JSONResponse({
+                "status": "error",
+                "error": f"Insufficient balance: {balance:.4f} SOL",
+                "balance": balance,
+            }, status_code=400)
+
+        sig = wallet.send_sol(TREASURY, SERVICE_FEE)
+
+        # Update shared state
+        with _lock:
+            _state["total_spent"] = _state.get("total_spent", 0) + SERVICE_FEE
+            _state["wallet_balance"] = wallet.get_balance(force=True)
+            _state["tx_count"] += 1
+
+        _add_activity("spend", f"💸 Service payment: -{SERVICE_FEE} SOL → Treasury (TX: {sig[:16]}...)")
+
+        return JSONResponse({
+            "status": "success",
+            "signature": sig,
+            "amount": SERVICE_FEE,
+            "balance": _state["wallet_balance"],
+            "network": config.SOLANA_NETWORK,
+        })
+
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "error": str(e),
+        }, status_code=500)
+
+
 @app.post("/api/network/{network}")
 def switch_api_network(network: str):
     """Switch the Solana network (devnet, testnet, mainnet)."""
