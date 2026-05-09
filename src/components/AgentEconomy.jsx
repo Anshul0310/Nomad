@@ -116,9 +116,14 @@ function useAgentEconomy() {
   const profitMargin = totalIn > 0 ? ((totalIn - totalOut) / totalIn) * 100 : 0
   const runway = dailyBurn > 0 ? Math.floor(realBalance / dailyBurn) : 999
 
+  // Critical state: below 3 SOL
+  const SURVIVAL_THRESHOLD = 3.0
+  const isCritical = connected && realBalance < SURVIVAL_THRESHOLD
+  const status = !connected ? "offline" : isCritical ? "critical" : "running"
+
   const state = {
-    status: connected ? "running" : "offline",
-    currentTask: connected ? "Monitoring wallet activity" : "Wallet not connected",
+    status,
+    currentTask: !connected ? "Wallet not connected" : isCritical ? "⚠ LOW BALANCE — Fund agent wallet" : "Monitoring wallet activity",
     cycle: txCount,
     balance: realBalance,
     burnRate,
@@ -126,13 +131,14 @@ function useAgentEconomy() {
     dailyEarnings: totalIn > 0 ? totalIn / Math.max(1, Math.ceil(txCount / 5)) : 0,
     profitMargin: Math.max(0, Math.min(100, profitMargin)),
     runway,
-    survivalThreshold: 0.5,
+    survivalThreshold: SURVIVAL_THRESHOLD,
     totalEarned: totalIn,
     totalSpent: totalOut,
     netProfit,
     totalTx: txCount,
     loading,
     connected,
+    isCritical,
   }
 
   return { state, transactions }
@@ -196,11 +202,17 @@ function GaugeRing({ value, max, label, color, icon: Icon, critical }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────
 
+// Agent wallet address (server-side wallet that receives funding)
+const AGENT_WALLET = "EwdjzckAnAyoUJPwd94VMf4UfPPYPX1rrfVWPDZ3WfFx"
+
 export function AgentEconomy() {
   const { state, transactions } = useAgentEconomy()
   const wallet = useWallet()
   const [showAllTx, setShowAllTx] = React.useState(false)
   const [copiedTx, setCopiedTx] = React.useState(null)
+  const [fundAmount, setFundAmount] = React.useState("3")
+  const [funding, setFunding] = React.useState(false)
+  const [fundResult, setFundResult] = React.useState(null)
   
   const displayedTx = showAllTx ? transactions : transactions.slice(0, 5)
   
@@ -212,6 +224,40 @@ export function AgentEconomy() {
     navigator.clipboard.writeText(sig)
     setCopiedTx(sig)
     setTimeout(() => setCopiedTx(null), 2000)
+  }
+
+  // Fund agent wallet — send SOL from Phantom to agent's server wallet
+  const handleFundAgent = async () => {
+    if (!wallet.connected || !wallet.publicKey || !wallet.connection) return
+    const amount = parseFloat(fundAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    setFunding(true)
+    setFundResult(null)
+    try {
+      const { Transaction: SolTx, SystemProgram: SysProg, PublicKey: PK, LAMPORTS_PER_SOL: LSOL } = await import("@solana/web3.js")
+      const provider = window?.solana
+      if (!provider) throw new Error("Phantom not found")
+
+      const tx = new SolTx().add(
+        SysProg.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: new PK(AGENT_WALLET),
+          lamports: Math.floor(amount * LSOL),
+        })
+      )
+      const { blockhash, lastValidBlockHeight } = await wallet.connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.lastValidBlockHeight = lastValidBlockHeight
+      tx.feePayer = wallet.publicKey
+
+      const { signature } = await provider.signAndSendTransaction(tx)
+      await wallet.connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })
+      setFundResult({ success: true, sig: signature, amount })
+    } catch (err) {
+      setFundResult({ success: false, error: err.message })
+    }
+    setFunding(false)
   }
   
   // Determine health status
@@ -259,6 +305,49 @@ export function AgentEconomy() {
               <button onClick={() => wallet.connect()} className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white text-sm font-semibold hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] transition-shadow">
                 Connect
               </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Critical state — fund agent wallet banner */}
+        {state.isCritical && wallet.connected && (
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="mb-8">
+            <div className="p-5 rounded-xl bg-gradient-to-r from-rose-500/10 to-amber-500/10 border-2 border-rose-500/30">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-rose-500/20 animate-pulse">
+                  <AlertTriangle className="w-6 h-6 text-rose-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-base font-outfit font-bold text-rose-400 mb-1">⚠ CRITICAL: Agent Balance Below {state.survivalThreshold} SOL</div>
+                  <div className="text-sm text-white/50 mb-3">The agent needs at least <span className="text-white font-semibold">{state.survivalThreshold} SOL</span> to operate. Current balance: <span className="text-rose-400 font-semibold">{state.balance.toFixed(4)} SOL</span>. Fund the agent wallet to restore operations.</div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number" min="0.1" step="0.5" value={fundAmount}
+                        onChange={(e) => setFundAmount(e.target.value)}
+                        className="w-24 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-rose-400/50 focus:outline-none"
+                      />
+                      <span className="text-xs text-white/40">SOL</span>
+                    </div>
+                    <button
+                      onClick={handleFundAgent}
+                      disabled={funding}
+                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        funding ? "bg-white/5 text-white/30 cursor-not-allowed" : "bg-gradient-to-r from-rose-500 to-amber-500 text-white hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]"
+                      }`}
+                    >
+                      {funding ? "Sending..." : `Fund Agent — ${fundAmount} SOL`}
+                    </button>
+                    {fundResult?.success && (
+                      <span className="text-xs text-emerald-400">✓ Funded! TX: {fundResult.sig.slice(0,8)}...</span>
+                    )}
+                    {fundResult?.error && (
+                      <span className="text-xs text-rose-400">✗ {fundResult.error}</span>
+                    )}
+                  </div>
+                  <div className="mt-2 text-[10px] text-white/20 font-mono">Agent wallet: {AGENT_WALLET}</div>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
