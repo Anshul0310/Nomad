@@ -487,6 +487,42 @@ export function AgentEconomy() {
                       }
                     </div>
                   </div>
+
+                  {/* Fund Agent Wallet — always visible */}
+                  <div className={`p-3 rounded-lg border ${state.isCritical ? "bg-rose-500/5 border-rose-500/20" : "bg-[#7c3aed]/5 border-[#7c3aed]/15"}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <WalletIcon className={`w-3.5 h-3.5 ${state.isCritical ? "text-rose-400" : "text-[#7c3aed]"}`} />
+                      <span className="text-[10px] font-mono text-white/40 uppercase">Fund Agent Wallet</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="number" min="0.1" step="0.5" value={fundAmount}
+                        onChange={(e) => setFundAmount(e.target.value)}
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-xs font-mono focus:border-[#7c3aed]/50 focus:outline-none"
+                        placeholder="SOL amount"
+                      />
+                      <button
+                        onClick={handleFundAgent}
+                        disabled={funding || !wallet.connected}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                          funding || !wallet.connected
+                            ? "bg-white/5 text-white/20 cursor-not-allowed"
+                            : state.isCritical
+                              ? "bg-gradient-to-r from-rose-500 to-amber-500 text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                              : "bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white hover:shadow-[0_0_15px_rgba(124,58,237,0.3)]"
+                        }`}
+                      >
+                        {funding ? "Sending..." : !wallet.connected ? "Connect Wallet" : `Send ${fundAmount} SOL`}
+                      </button>
+                    </div>
+                    {fundResult?.success && (
+                      <div className="text-[10px] text-emerald-400 font-mono">✓ Sent {fundResult.amount} SOL — TX: {fundResult.sig.slice(0,12)}...</div>
+                    )}
+                    {fundResult?.error && (
+                      <div className="text-[10px] text-rose-400 font-mono">✗ {fundResult.error}</div>
+                    )}
+                    <div className="text-[9px] text-white/15 font-mono mt-1 truncate">Agent: {AGENT_WALLET}</div>
+                  </div>
                 </div>
               </div>
             </GlowingEffect>
