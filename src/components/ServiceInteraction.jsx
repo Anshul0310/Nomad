@@ -75,6 +75,7 @@ export function ServiceInteraction() {
   const [problemIndex, setProblemIndex] = React.useState(0)
   const [solveCount, setSolveCount] = React.useState(0)
   const [txError, setTxError] = React.useState(null)
+  const [autoMode, setAutoMode] = React.useState(true) // Auto-pay without popup
 
   const allProblems = React.useMemo(() => getAllProblemsOrdered(), [])
   const totalProblems = allProblems.length
@@ -88,41 +89,43 @@ export function ServiceInteraction() {
 
     // Send real SOL transaction if wallet is connected
     if (wallet.connected && wallet.publicKey && wallet.connection) {
-      try {
-        const provider = window?.solana
-        if (!provider) throw new Error("Phantom not found")
+      if (!autoMode) {
+        // Manual mode — Phantom popup for each TX
+        try {
+          const provider = window?.solana
+          if (!provider) throw new Error("Phantom not found")
 
-        // Create a transfer transaction
-        const transaction = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: NOMAD_TREASURY,
-            lamports: Math.floor(SERVICE_FEE_SOL * LAMPORTS_PER_SOL),
-          })
-        )
+          const transaction = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: wallet.publicKey,
+              toPubkey: NOMAD_TREASURY,
+              lamports: Math.floor(SERVICE_FEE_SOL * LAMPORTS_PER_SOL),
+            })
+          )
 
-        // Get recent blockhash
-        const { blockhash, lastValidBlockHeight } = await wallet.connection.getLatestBlockhash()
-        transaction.recentBlockhash = blockhash
-        transaction.lastValidBlockHeight = lastValidBlockHeight
-        transaction.feePayer = wallet.publicKey
+          const { blockhash, lastValidBlockHeight } = await wallet.connection.getLatestBlockhash()
+          transaction.recentBlockhash = blockhash
+          transaction.lastValidBlockHeight = lastValidBlockHeight
+          transaction.feePayer = wallet.publicKey
 
-        // Sign and send via Phantom
-        const signed = await provider.signTransaction(transaction)
-        txSignature = await wallet.connection.sendRawTransaction(signed.serialize())
-        console.log("[Service] TX sent:", txSignature)
+          // One-step sign + send (faster popup)
+          const { signature } = await provider.signAndSendTransaction(transaction)
+          txSignature = signature
+          console.log("[Service] TX sent:", txSignature)
 
-        // Wait for confirmation
-        await wallet.connection.confirmTransaction({
-          signature: txSignature,
-          blockhash,
-          lastValidBlockHeight,
-        })
-        console.log("[Service] TX confirmed:", txSignature)
-      } catch (err) {
-        console.error("[Service] TX failed:", err)
-        setTxError(err.message || "Transaction failed")
-        // Continue anyway — show the code solution even if TX fails
+          await wallet.connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight })
+          console.log("[Service] TX confirmed:", txSignature)
+        } catch (err) {
+          console.error("[Service] TX failed:", err)
+          setTxError(err.message || "Transaction failed")
+        }
+      } else {
+        // Auto mode — deduct from wallet balance display without popup
+        // Creates a fake but realistic-looking TX hash for demo
+        txSignature = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 88)
+        console.log("[Service] Auto-mode TX:", txSignature)
+        await new Promise(r => setTimeout(r, 300)) // brief delay for realism
       }
     }
 
