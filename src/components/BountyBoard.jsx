@@ -17,11 +17,19 @@ const statusConfig = {
 }
 
 function timeAgo(date) {
-  const diff = Date.now() - date.getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  if (!date) return "recently"
+  try {
+    const d = date instanceof Date ? date : new Date(date)
+    if (isNaN(d.getTime())) return "recently"
+    const diff = Date.now() - d.getTime()
+    const hours = Math.floor(diff / 3600000)
+    if (hours < 1) return "just now"
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  } catch {
+    return "recently"
+  }
 }
 
 export function BountyBoard() {
