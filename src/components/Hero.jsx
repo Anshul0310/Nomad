@@ -168,32 +168,7 @@ export function Hero() {
           </div>
         </motion.div>
 
-        {/* Key stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.5 }}
-          className="mt-12 grid grid-cols-3 gap-4 max-w-lg mx-auto"
-        >
-          {[
-            { label: "Solana Txs", value: "4,291+", icon: Zap },
-            { label: "Uptime", value: "99.97%", icon: Cpu },
-            { label: "Self-Funded", value: "100%", icon: () => (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v12M6 12h12" />
-              </svg>
-            )},
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="text-2xl md:text-3xl font-outfit font-bold text-white">{stat.value}</div>
-              <div className="text-xs text-white/40 mt-1 flex items-center justify-center gap-1">
-                <stat.icon className="w-3 h-3" />
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </motion.div>
+
 
         {/* Scroll hint */}
         <motion.div
