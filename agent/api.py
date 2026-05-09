@@ -323,6 +323,62 @@ def pay_for_service():
         }, status_code=500)
 
 
+@app.get("/api/agent-wallet")
+def get_agent_wallet():
+    """Get agent wallet address and balance."""
+    try:
+        from agent.wallet.solana_wallet import SolanaWallet
+        wallet = SolanaWallet()
+        balance = wallet.get_balance(force=True)
+        return JSONResponse({
+            "address": wallet.address,
+            "balance": balance,
+            "network": config.SOLANA_NETWORK,
+        })
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/agent-wallet/send")
+def send_from_agent(to_address: str = None, amount: float = 0):
+    """Send SOL from agent wallet to any address."""
+    if not to_address:
+        return JSONResponse({"error": "to_address required"}, status_code=400)
+    if amount <= 0:
+        return JSONResponse({"error": "amount must be positive"}, status_code=400)
+
+    try:
+        from agent.wallet.solana_wallet import SolanaWallet
+        wallet = SolanaWallet()
+        balance = wallet.get_balance(force=True)
+
+        if balance < amount + 0.001:
+            return JSONResponse({
+                "status": "error",
+                "error": f"Insufficient balance: {balance:.4f} SOL (need {amount + 0.001:.4f})",
+                "balance": balance,
+            }, status_code=400)
+
+        sig = wallet.send_sol(to_address, amount)
+        new_balance = wallet.get_balance(force=True)
+
+        with _lock:
+            _state["wallet_balance"] = new_balance
+            _state["tx_count"] += 1
+
+        _add_activity("spend", f"💸 Sent {amount:.4f} SOL → {to_address[:8]}... (TX: {sig[:16]}...)")
+
+        return JSONResponse({
+            "status": "success",
+            "signature": sig,
+            "amount": amount,
+            "balance": new_balance,
+            "network": config.SOLANA_NETWORK,
+        })
+    except Exception as e:
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
+
 @app.post("/api/distribute")
 def distribute_profits(user_wallet: str = None):
     """

@@ -296,6 +296,62 @@ export function AgentEconomy() {
   }
 
   const remainingShare = Math.max(0, (state.netProfit - totalDistributed) * 0.6)
+
+  // Agent wallet state
+  const [agentBalance, setAgentBalance] = React.useState(null)
+  const [agentAddress, setAgentAddress] = React.useState("")
+  const [sendAmount, setSendAmount] = React.useState("1")
+  const [sending, setSending] = React.useState(false)
+  const [sendResult, setSendResult] = React.useState(null)
+  const [copiedAddr, setCopiedAddr] = React.useState(false)
+
+  // Fetch agent wallet balance on mount and every 10s
+  React.useEffect(() => {
+    const fetchAgentWallet = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/agent-wallet")
+        const data = await res.json()
+        if (data.address) setAgentAddress(data.address)
+        if (data.balance !== undefined) setAgentBalance(data.balance)
+      } catch { /* backend not running */ }
+    }
+    fetchAgentWallet()
+    const interval = setInterval(fetchAgentWallet, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Send SOL from agent wallet to user's Phantom
+  const handleSendFromAgent = async () => {
+    if (!wallet.connected || !wallet.address) return
+    const amount = parseFloat(sendAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    setSending(true)
+    setSendResult(null)
+    try {
+      const res = await fetch(`http://localhost:8000/api/agent-wallet/send?to_address=${wallet.address}&amount=${amount}`, {
+        method: "POST",
+        signal: AbortSignal.timeout(20000),
+      })
+      const data = await res.json()
+      if (data.status === "success") {
+        setSendResult(data)
+        setAgentBalance(data.balance)
+      } else {
+        setSendResult({ error: data.error || "Send failed" })
+      }
+    } catch (err) {
+      setSendResult({ error: "Backend not running" })
+    }
+    setSending(false)
+  }
+
+  // Copy agent address
+  const copyAgentAddr = () => {
+    navigator.clipboard.writeText(agentAddress)
+    setCopiedAddr(true)
+    setTimeout(() => setCopiedAddr(false), 2000)
+  }
   
   // Determine health status
   const healthScore = Math.min(100, Math.max(0,
@@ -559,6 +615,100 @@ export function AgentEconomy() {
                       <div className="text-[10px] text-rose-400 font-mono">✗ {fundResult.error}</div>
                     )}
                     <div className="text-[9px] text-white/15 font-mono mt-1 truncate">Agent: {AGENT_WALLET}</div>
+                  </div>
+                </div>
+              </div>
+            </GlowingEffect>
+          </motion.div>
+
+          {/* Agent Wallet */}
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.17 }} className="lg:col-span-5">
+            <GlowingEffect>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-outfit font-semibold text-white flex items-center gap-2">
+                    <WalletIcon className="w-4 h-4 text-[#7c3aed]" /> Agent Wallet
+                  </h3>
+                  <span className="text-[10px] font-mono text-white/25">Auto-refresh 10s</span>
+                </div>
+
+                {/* Balance + Address */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-[#7c3aed]/10 to-[#2563eb]/10 border border-[#7c3aed]/20 text-center">
+                    <div className="text-[10px] text-[#7c3aed]/60 font-mono uppercase mb-1">Balance</div>
+                    <div className="text-2xl font-mono font-bold text-white">{agentBalance !== null ? agentBalance.toFixed(4) : "—"}</div>
+                    <div className="text-[10px] text-white/30">SOL</div>
+                  </div>
+                  <div className="sm:col-span-2 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                    <div className="text-[10px] text-white/30 font-mono uppercase mb-2">Wallet Address</div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs text-white/50 font-mono truncate">{agentAddress || "Loading..."}</code>
+                      <button onClick={copyAgentAddr} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Copy address">
+                        {copiedAddr ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-white/30" />}
+                      </button>
+                      {agentAddress && (
+                        <a href={`https://explorer.solana.com/address/${agentAddress}?cluster=${network}`} target="_blank" rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="View on Explorer">
+                          <ExternalLink className="w-3.5 h-3.5 text-white/30" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions: Fund + Send */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Fund Agent */}
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="text-xs font-outfit font-semibold text-emerald-400 mb-3 flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5" /> Add SOL to Agent
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="number" min="0.1" step="0.5" value={fundAmount}
+                        onChange={(e) => setFundAmount(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-400/50 focus:outline-none" />
+                      <button onClick={handleFundAgent} disabled={funding || !wallet.connected}
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                          funding || !wallet.connected ? "bg-white/5 text-white/20 cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                        }`}>
+                        {funding ? "Sending..." : `Fund ${fundAmount} SOL`}
+                      </button>
+                    </div>
+                    {fundResult?.success && (
+                      <div className="text-[10px] text-emerald-400 font-mono">✓ Funded! TX: {fundResult.sig?.slice(0,12)}...</div>
+                    )}
+                    {fundResult?.error && (
+                      <div className="text-[10px] text-rose-400 font-mono">✗ {fundResult.error}</div>
+                    )}
+                  </div>
+
+                  {/* Send from Agent */}
+                  <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/10">
+                    <div className="text-xs font-outfit font-semibold text-[#a78bfa] mb-3 flex items-center gap-1.5">
+                      <TrendingDown className="w-3.5 h-3.5" /> Send to My Wallet
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="number" min="0.001" step="0.1" value={sendAmount}
+                        onChange={(e) => setSendAmount(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-[#7c3aed]/50 focus:outline-none" />
+                      <button onClick={handleSendFromAgent} disabled={sending || !wallet.connected || agentBalance <= 0}
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                          sending || !wallet.connected || agentBalance <= 0 ? "bg-white/5 text-white/20 cursor-not-allowed" : "bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white hover:shadow-[0_0_15px_rgba(124,58,237,0.3)]"
+                        }`}>
+                        {sending ? "Sending..." : `Withdraw ${sendAmount} SOL`}
+                      </button>
+                    </div>
+                    {sendResult?.signature && (
+                      <div className="text-[10px] font-mono">
+                        <span className="text-emerald-400">✓ Sent!</span>{" "}
+                        <a href={explorerUrl(sendResult.signature)} target="_blank" rel="noopener noreferrer" className="text-[#7c3aed] hover:text-[#9b5de5]">
+                          TX: {sendResult.signature.slice(0,12)}... <ExternalLink className="w-2.5 h-2.5 inline" />
+                        </a>
+                      </div>
+                    )}
+                    {sendResult?.error && (
+                      <div className="text-[10px] text-rose-400 font-mono">✗ {sendResult.error}</div>
+                    )}
                   </div>
                 </div>
               </div>
