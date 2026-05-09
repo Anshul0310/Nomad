@@ -6,6 +6,7 @@ import { ActivityFeed } from "./components/ActivityFeed"
 import { ServiceInteraction } from "./components/ServiceInteraction"
 import { BountyBoard } from "./components/BountyBoard"
 import { EconomicFlywheel } from "./components/EconomicFlywheel"
+import { AgentEconomy } from "./components/AgentEconomy"
 import { Footer } from "./components/Footer"
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Navbar />
       <Hero />
       <HealthPanel />
+      <AgentEconomy />
       <ActivityFeed />
       <EconomicFlywheel />
       <ServiceInteraction />
