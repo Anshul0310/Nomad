@@ -8,20 +8,23 @@ import { BountyBoard } from "./components/BountyBoard"
 import { EconomicFlywheel } from "./components/EconomicFlywheel"
 import { AgentEconomy } from "./components/AgentEconomy"
 import { Footer } from "./components/Footer"
+import { WalletProvider } from "./contexts/WalletContext"
 
 function App() {
   return (
-    <div className="bg-[#020204] text-white min-h-screen font-inter selection:bg-[#7c3aed]/30">
-      <Navbar />
-      <Hero />
-      <HealthPanel />
-      <AgentEconomy />
-      <ActivityFeed />
-      <EconomicFlywheel />
-      <ServiceInteraction />
-      <BountyBoard />
-      <Footer />
-    </div>
+    <WalletProvider>
+      <div className="bg-[#020204] text-white min-h-screen font-inter selection:bg-[#7c3aed]/30">
+        <Navbar />
+        <Hero />
+        <HealthPanel />
+        <AgentEconomy />
+        <ActivityFeed />
+        <EconomicFlywheel />
+        <ServiceInteraction />
+        <BountyBoard />
+        <Footer />
+      </div>
+    </WalletProvider>
   )
 }
 

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
+import { useWallet } from "@/contexts/WalletContext"
 import { Wallet, Activity, ShoppingBag, Award, BarChart3, Menu, X, ChevronDown, Globe } from "lucide-react"
 
 const navItems = [
@@ -17,7 +18,7 @@ const NETWORKS = [
 ]
 
 export function Navbar() {
-  const [walletConnected, setWalletConnected] = React.useState(false)
+  const { connected, connecting, shortAddress, balance, connect, disconnect, network: walletNet, setNetwork: setWalletNet } = useWallet()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [scrolled, setScrolled] = React.useState(false)
   const [networkDropdown, setNetworkDropdown] = React.useState(false)
@@ -59,6 +60,8 @@ export function Navbar() {
     } catch {
       // Backend offline — that's fine, the UI still reflects the selection
     }
+    // Also update wallet context network
+    setWalletNet(net === "mainnet" ? "mainnet-beta" : net)
     setSwitching(false)
   }
 
@@ -148,19 +151,27 @@ export function Navbar() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setWalletConnected(!walletConnected)}
+            onClick={() => connected ? disconnect() : connect()}
+            disabled={connecting}
             className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
-              walletConnected
+              connected
                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                : connecting
+                ? "bg-white/5 text-white/30 cursor-wait"
                 : "bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
             }`}
           >
             <Wallet className="w-4 h-4" />
-            {walletConnected ? (
+            {connected ? (
               <span className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                7xKp...9mNz
+                {shortAddress}
+                {balance !== null && (
+                  <span className="text-xs text-emerald-400/60 ml-1">{balance.toFixed(2)} SOL</span>
+                )}
               </span>
+            ) : connecting ? (
+              "Connecting..."
             ) : (
               "Connect Wallet"
             )}
@@ -215,11 +226,11 @@ export function Navbar() {
                 ))}
               </div>
               <button
-                onClick={() => { setWalletConnected(!walletConnected); setMobileOpen(false) }}
+                onClick={() => { connected ? disconnect() : connect(); setMobileOpen(false) }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#7c3aed] to-[#2563eb] text-white"
               >
                 <Wallet className="w-4 h-4" />
-                {walletConnected ? "Disconnect" : "Connect Wallet"}
+                {connected ? `Disconnect (${shortAddress})` : "Connect Wallet"}
               </button>
             </div>
           </motion.div>

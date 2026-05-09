@@ -320,12 +320,11 @@ export function AgentEconomy() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
+                        className="p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                       >
-                        <div
-                          onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer group"
-                        >
-                          <div className={`p-1.5 rounded-lg ${tx.type === "earn" ? "bg-emerald-500/10" : "bg-rose-500/10"}`}>
+                        {/* Row 1: Description + Amount */}
+                        <div className="flex items-center gap-3">
+                          <div className={`p-1.5 rounded-lg flex-shrink-0 ${tx.type === "earn" ? "bg-emerald-500/10" : "bg-rose-500/10"}`}>
                             {tx.type === "earn" 
                               ? <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400" />
                               : <ArrowUpRight className="w-3.5 h-3.5 text-rose-400" />
@@ -333,50 +332,25 @@ export function AgentEconomy() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-xs text-white/70 truncate">{tx.desc}</div>
-                            <div className="text-[10px] text-white/25 font-mono flex items-center gap-2">
-                              <span>{truncateSig(tx.sig)}</span>
-                              <span>•</span>
-                              <span>{tx.time}</span>
-                            </div>
                           </div>
                           <div className={`text-sm font-mono font-semibold whitespace-nowrap ${tx.type === "earn" ? "text-emerald-400" : "text-rose-400"}`}>
                             {tx.type === "earn" ? "+" : "-"}{tx.amount.toFixed(4)} SOL
                           </div>
                         </div>
-                        {/* Expanded TX details */}
-                        <AnimatePresence>
-                          {expandedTx === tx.id && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="mx-3 mb-1 p-3 rounded-lg bg-white/[0.015] border border-white/5 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] text-white/30 font-mono uppercase">Transaction ID</span>
-                                  <div className="flex items-center gap-1.5">
-                                    <button onClick={(e) => { e.stopPropagation(); copyTxId(tx.sig) }}
-                                      className="text-[10px] text-white/30 hover:text-white/60 transition-colors flex items-center gap-1">
-                                      {copiedTx === tx.sig ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                      {copiedTx === tx.sig ? "Copied" : "Copy"}
-                                    </button>
-                                    <a href={explorerUrl(tx.sig)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                      className="text-[10px] text-[#7c3aed] hover:text-[#9b5de5] transition-colors flex items-center gap-1">
-                                      <ExternalLink className="w-3 h-3" /> Explorer
-                                    </a>
-                                  </div>
-                                </div>
-                                <div className="text-[10px] font-mono text-white/50 break-all bg-white/[0.02] p-2 rounded">{tx.sig}</div>
-                                <div className="grid grid-cols-3 gap-2 text-[10px]">
-                                  <div><span className="text-white/25 block">Type</span><span className={tx.type === "earn" ? "text-emerald-400" : "text-rose-400"}>{tx.type === "earn" ? "Received" : "Sent"}</span></div>
-                                  <div><span className="text-white/25 block">Amount</span><span className="text-white/70">{tx.amount.toFixed(6)} SOL</span></div>
-                                  <div><span className="text-white/25 block">Network</span><span className="text-white/70 capitalize">{network}</span></div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {/* Row 2: TX ID + Actions — always visible */}
+                        <div className="flex items-center gap-2 mt-2 ml-10">
+                          <span className="text-[10px] text-white/20 font-mono">TX:</span>
+                          <span className="text-[10px] text-white/35 font-mono truncate flex-1">{tx.sig}</span>
+                          <span className="text-[10px] text-white/20">{tx.time}</span>
+                          <button onClick={() => copyTxId(tx.sig)}
+                            className="text-[10px] text-white/25 hover:text-white/60 transition-colors flex items-center gap-0.5 ml-1">
+                            {copiedTx === tx.sig ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                          <a href={explorerUrl(tx.sig)} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] text-[#7c3aed] hover:text-[#9b5de5] transition-colors flex items-center gap-0.5">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
