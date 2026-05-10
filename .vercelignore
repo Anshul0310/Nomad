@@ -3,10 +3,8 @@ blockchain/
 programs/
 target/
 sdk/
-*.py
 *.rs
 *.toml
-requirements.txt
 Cargo.lock
 .env
 __pycache__/
